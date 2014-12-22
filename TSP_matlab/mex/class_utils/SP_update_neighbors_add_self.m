@@ -12,39 +12,23 @@ function SP = SP_update_neighbors_add_self(SP, label, index)
     [xdim, ydim] = size(label);
     [x, y] = get_x_and_y_from_index(index, xdim);
     cur_label = label(x, y);
-
-    % don't do all neighbors, only the unique ones
+    neighbor_labels = zeros(1, 4);
     if x>1
-        llabel = label(x-1, y);
-    else
-        llabel = 0;
+        neighbor_labels(1) = label(x-1, y);
     end
     if y>1
-        ulabel = label(x, y-1);
-    else
-        ulabel = 0;
+        neighbor_labels(2) = label(x, y-1);
     end
     if x<xdim
-        rlabel = label(x+1, y);
-    else
-        rlabel = 0;
+        neighbor_labels(3) = label(x+1, y);
     end
     if y<ydim
-        dlabel = label(x, y+1);
-    else
-        dlabel = 0;
+        neighbor_labels(4) = label(x, y+1);
     end
-
-    if (llabel>0 && llabel~=cur_label)
-        SP = SP_update_neighbors_label_add(SP, llabel);
-    end
-    if (ulabel>0 && ulabel~=cur_label)
-        SP = SP_update_neighbors_label_add(SP, ulabel);
-    end
-    if (rlabel>0 && rlabel~=cur_label)
-        SP = SP_update_neighbors_label_add(SP ,rlabel);
-    end
-    if (dlabel>0 && dlabel~=cur_label)
-        SP = SP_update_neighbors_label_add(SP, dlabel);
+    
+    for neighbor_label=unique(neighbor_labels)
+        if neighbor_label>0 && neighbor_label~=cur_label
+            SP.neighbors(neighbor_label) = SP.neighbors(neighbor_label)+1;
+        end
     end
 end

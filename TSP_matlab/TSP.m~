@@ -114,7 +114,8 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         IMG2.Sxy = [];
         IMG2.Syy = [];
         converged = false;
-        while (~converged && it<5 && true && frame_it==1)
+        
+        while (~converged && it<5 && frame_it==1)
             it = it + 1;
             fprintf('initial while loop: it=%d\n', it);
 
@@ -141,7 +142,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
 
             if (dispOn)
                 display_img(IMG, it, oim, false);
-                display_img(IMG2, it, oim, true);
+%                display_img(IMG2, it, oim, true);
             end
         end
 
@@ -155,12 +156,13 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             IMG.SP_changed(:) = true;
             IMG = switch_move(IMG);
             IMG.SP_changed(:) = true;
-            IMG = localonly_move(IMG,1000);
+            IMG = localonly_move(IMG,10);
         end
         IMG.SP_changed(:) = true;
         IMG.alive_dead_changed = true;
         
         it = 0;
+        old_label = IMG.label;
         while (~converged && it<20)
             old_SP_changed = IMG.SP_changed;
             it = it + 1;
@@ -170,7 +172,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             if (~params.reestimateFlow)
                 IMG.SP_changed = old_SP_changed;
                 disp('localonly_move');
-                tic;IMG = localonly_move(IMG,1500);times(2)=toc;
+                tic;IMG = localonly_move(IMG,15);times(2)=toc;
                 SP_changed1 = IMG.SP_changed;
                 SP_changed0 = SP_changed1;
             else
@@ -179,7 +181,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
                 tic;IMG = local_move(IMG,1000);times(1)=toc;
                 SP_changed0 = IMG.SP_changed;
                 IMG.SP_changed = old_SP_changed;
-                tic;IMG = localonly_move(IMG,500);times(2)=toc;
+                tic;IMG = localonly_move(IMG,5);times(2)=toc;
                 SP_changed1 = IMG.SP_changed;
             end
             if (frame_it>1 && it<5)
@@ -204,7 +206,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
 
             if (dispOn)
                 display_img(IMG, it, oim, true);
-                display_img(IMG2, it, oim, false);
+%                display_img(IMG2, it, oim, false);
             end
         end
 
@@ -213,7 +215,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         for m = find(mask)
             SP_UID{m} = -1;
         end
-        sp_labels(:,:,frame_it) = reshape([SP_UID{IMG.label(IMG.w+1:end-IMG.w,IMG.w+1:end-IMG.w) +1}], size(oim,1), size(oim,2));
+        sp_labels(:,:,frame_it) = reshape([SP_UID{IMG.label(IMG.w+1:end-IMG.w,IMG.w+1:end-IMG.w)}], size(oim,1), size(oim,2));
     end
 end
 
@@ -226,7 +228,7 @@ function display_img(IMG, it, oim, is_2)
     sfigure(1+offset);
     subplot(1,1,1);
     imagesc(IMG.label);
-    title([num2str(it) ' - ' num2str(numel(unique(IMG.label)))]);
+    title([num2str(it) ' - ' num2str(numel(unique(IMG.label))-1)]);
 
     sfigure(2+offset);
     subplot(1,1,1);

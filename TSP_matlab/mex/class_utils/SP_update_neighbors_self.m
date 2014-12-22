@@ -8,9 +8,8 @@
 % --     - (xdim,ydim) : dimensions of image
 % --------------------------------------------------------------------------
 function SP = SP_update_neighbors_self(SP, label)
-    for index=1:length(SP.borders)
-        if SP.borders(index)
-            SP = SP_update_neighbors_add_self(SP, label, index);
-        end
+    SP.neighbors = zeros(size(SP.neighbors));
+    for index=find(SP.borders)'
+        SP = SP_update_neighbors_add_self(SP, label, index);
     end
 end

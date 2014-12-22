@@ -471,6 +471,11 @@ function IMG = U_connect_newSP(IMG, bbox, num_SP)
     end
 
     % Now is the time to clean up the border pixels and neighbor ids
+    
+    %%THIS IS SUPER INEFFICIENT CHANGE IT WHEN YOUR BRAIN WORKS
+    
+    % BLARG
+    
     for k=1:IMG.K+label_count
         IMG.SP(k) = SP_fix_borders(IMG.SP(k), IMG.label);
         IMG = U_fix_neighbors_self(IMG, k);

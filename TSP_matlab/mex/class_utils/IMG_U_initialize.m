@@ -13,7 +13,7 @@ function IMG = IMG_U_initialize(IMG)
     for x=1:IMG.xdim
         for y=1:IMG.ydim
             curLabel = IMG.label(x, y);
-            if (curLabel>=1)
+            if (curLabel>0)
                 index = get_index_from_x_and_y(x, y, IMG.xdim);
                 IMG.SP(curLabel) = SP_add_pixel_init(IMG.SP(curLabel), IMG.data, index, U_check_border_pix(IMG, index), IMG.boundary_mask(x, y));
                 IMG.SP(curLabel) = SP_update_neighbors_add_self(IMG.SP(curLabel), IMG.label, index);

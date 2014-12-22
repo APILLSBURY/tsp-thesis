@@ -16,7 +16,6 @@ function IMG = localonly_move(IMG, its)
     addpath('mex/class_utils/');
     for i=1:its
         fprintf('its=%d\n', i);
-        fprintf('making moves mod\n');
         IMG = local_move_internal(IMG);
         if ~IMG.changed
             break;

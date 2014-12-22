@@ -14,7 +14,7 @@
 
 
 std::pair<int, int> increment_neighbor_count(std::pair<int, int> n)
-{
+{ 
    n.second++;
    return n;
 }

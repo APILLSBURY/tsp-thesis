@@ -115,8 +115,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         IMG2.Syy = [];
         converged = false;
         
-        %%REMOVE THIS FALSE THING
-        while (false && ~converged && it<5 && frame_it==1)
+        while (~converged && it<5 && frame_it==1)
             it = it + 1;
             fprintf('initial while loop: it=%d\n', it);
 
@@ -128,7 +127,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
 
             if (dispOn)
                 display_img(IMG, it, oim, false);
-                display_img(IMG2, it, oim, true);
+%                display_img(IMG2, it, oim, true);
             end
             
             IMG = split_move(IMG,1);
@@ -143,7 +142,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
 
             if (dispOn)
                 display_img(IMG, it, oim, false);
-                display_img(IMG2, it, oim, true);
+%                display_img(IMG2, it, oim, true);
             end
         end
 
@@ -163,6 +162,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         IMG.alive_dead_changed = true;
         
         it = 0;
+        old_label = IMG.label;
         while (~converged && it<20)
             old_SP_changed = IMG.SP_changed;
             it = it + 1;
@@ -206,7 +206,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
 
             if (dispOn)
                 display_img(IMG, it, oim, true);
-                display_img(IMG2, it, oim, false);
+%                display_img(IMG2, it, oim, false);
             end
         end
 
@@ -215,7 +215,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         for m = find(mask)
             SP_UID{m} = -1;
         end
-        sp_labels(:,:,frame_it) = reshape([SP_UID{IMG.label(IMG.w+1:end-IMG.w,IMG.w+1:end-IMG.w) +1}], size(oim,1), size(oim,2));
+        sp_labels(:,:,frame_it) = reshape([SP_UID{IMG.label(IMG.w+1:end-IMG.w,IMG.w+1:end-IMG.w)}], size(oim,1), size(oim,2));
     end
 end
 

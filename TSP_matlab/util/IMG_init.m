@@ -15,8 +15,7 @@ IMG.area = N/params.K;
 IMG.area_var = params.area_var;
 
 
-IMG.w = 2*round(2*sqrt(IMG.area/pi));
-IMG.w = 2*round(2*sqrt(IMG.area/pi));
+IMG.w = round(2*sqrt(IMG.area/pi)); %used to be *2
 
 IMG.xdim = IMG.oxdim + 2*IMG.w;
 IMG.ydim = IMG.oydim + 2*IMG.w;

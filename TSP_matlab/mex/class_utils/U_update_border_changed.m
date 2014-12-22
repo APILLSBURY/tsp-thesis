@@ -9,15 +9,27 @@
 function IMG = U_update_border_changed(IMG, index)
     [x, y] = get_x_and_y_from_index(index, IMG.xdim);
     if (x>1)
-        IMG = U_update_border_changed_pixel(IMG, index-1);
+        curLabel = IMG.label(x-1, y);
+        if curLabel > 0
+            IMG.SP(curLabel).borders(index-1) = U_check_border_pix(IMG, index-1);
+        end
     end
     if (y>1)
-        IMG = U_update_border_changed_pixel(IMG, index-IMG.xdim);
+        curLabel = IMG.label(x, y-1);
+        if curLabel > 0
+            IMG.SP(curLabel).borders(index-IMG.xdim) = U_check_border_pix(IMG, index-IMG.xdim);
+        end
     end
     if (x<IMG.xdim)
-        IMG = U_update_border_changed_pixel(IMG, index+1);
+        curLabel = IMG.label(x+1, y);
+        if curLabel > 0
+            IMG.SP(curLabel).borders(index+1) = U_check_border_pix(IMG, index+1);
+        end
     end
     if (y<IMG.ydim)
-        IMG = U_update_border_changed_pixel(IMG, index+IMG.xdim);
+        curLabel = IMG.label(x, y+1);
+        if curLabel > 0
+            IMG.SP(curLabel).borders(index+IMG.xdim) = U_check_border_pix(IMG, index+IMG.xdim);
+        end
     end
 end
