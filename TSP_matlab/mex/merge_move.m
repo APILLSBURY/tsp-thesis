@@ -21,34 +21,31 @@ function IMG = merge_move(IMG, its)
 
         neighbors = false(Nsp, 1);
 
-        for ki=1:Nsp
-            k = perm(ki);
+        for k=perm;
 
             % find a nonempty super pixel
-            if ~isempty(IMG.SP(k).N)
+            if ~SP_is_empty(IMG, k)
                 % find all bordering super pixels
-
                 neighbors = U_find_border_SP(IMG, k, neighbors);
 
                 max_E = -inf;
                 max_k = -1;
 
                 % loop through all neighbors
-                for merge_k=1:length(neighbors)
-                    if neighbors(merge_k)
-                        new_E = move_merge_calc_delta(IMG, k, merge_k);
-                        if (new_E > max_E || max_k==-1)
-                            max_E = new_E;
-                            max_k = merge_k;
-                        end
-
-                        % fix neighbors for the next super pixel
-                        neighbors(merge_k) = false;
+                for merge_k=find(neighbors)'
+                    new_E = move_merge_calc_delta(IMG, k, merge_k);
+                    if new_E > max_E || max_k==-1
+                        max_E = new_E;
+                        max_k = merge_k;
                     end
                 end
 
+                % fix neighbors for the next super pixel
+                neighbors = false(size(neighbors));
+
                 % merge if it increases energy
                 if (max_E>0)
+                    disp('max e is greater than 0');
                     % change the labels
                     for index=1:length(IMG.SP(max_k).pixels)
                         if IMG.SP(max_k).pixels(index)
@@ -62,7 +59,7 @@ function IMG = merge_move(IMG, its)
                     IMG.SP(k) = SP_merge_with(IMG.SP(k), IMG.SP(max_k), IMG.label);
                     IMG.SP(max_k) = SP_empty(IMG.SP(max_k));
                     if (~IMG.SP_old(max_k))
-                        IMG.SP(max_k) = [];
+                        IMG.SP(max_k) = SP_empty(IMG.SP(max_k)); %VERY QUESTIONABLE
                     else
                         IMG.alive_dead_changed = true;
                     end

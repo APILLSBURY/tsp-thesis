@@ -58,6 +58,7 @@ IMG.hyper.a_Sigma(:) = 1;
 IMG.K = round(params.K*params.Kpercent);
 IMG.label = random_init(IMG.xdim, IMG.ydim, IMG.w, IMG.K);
 IMG.label(~IMG.boundary_mask) = 0;
+IMG.max_SPs = IMG.K + IMG.area;
 
 % 3. Topology Table Look Up
 load topology_tables;
@@ -65,7 +66,18 @@ IMG.T4Table = tc.T4Table;
 
 IMG.max_UID = 1;
 
-IMG.SP_changed = true(1, IMG.xdim*IMG.ydim);
+IMG.SP_changed = true(1, IMG.max_SPs);
+
+IMG.new_pos = new_NormalD(2, IMG.hyper.p_theta, IMG.hyper.p_Delta, true);
+IMG.new_app = new_NormalD(3, IMG.hyper.a_theta, IMG.hyper.a_Delta, true);
+IMG.SP_old = false(1,IMG.max_SPs);
+IMG.log_area_var = log(IMG.area_var);
 
 disp('initializing IMG');
-IMG = IMG_U_initialize(IMG);
+IMG.K = max(max(IMG.label));
+for i=1:IMG.K
+    IMG.SP(i) = new_SP(IMG.new_pos, IMG.new_app, IMG.max_UID, [0, 0], IMG.N, IMG.max_SPs);
+    IMG.max_UID = IMG.max_UID+1;
+end
+
+IMG = IMG_populate_SPs(IMG);

@@ -63,7 +63,7 @@ function IMG = switch_move(IMG)
                         disp('Ran out of space!');
                     end
                     if (isempty(IMG.SP(k).N))
-                        IMG.SP(k) = new_SP(IMG.new_pos, IMG.new_app, IMG.max_UID, false, IMG.SP(k).prev_v, IMG.N);
+                        IMG.SP(k) = new_SP(IMG.new_pos, IMG.new_app, IMG.max_UID, false, [0, 0], IMG.N, IMG.max_SPs);
                         IMG.max_UID = IMG.max_UID + 1;
                     end
                     IMG.K = IMG.K + 1;

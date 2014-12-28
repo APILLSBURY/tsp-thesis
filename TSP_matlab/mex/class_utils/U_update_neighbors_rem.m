@@ -11,7 +11,7 @@
 function IMG = U_update_neighbors_rem(IMG, old_label, index)
     if (old_label>0)
         [x, y] = get_x_and_y_from_index(index, IMG.xdim);
-        neighbor_labels = ones(1, 4) * old_label;
+        neighbor_labels = zeros(1, 4);
         if x>1
             neighbor_labels(1) = IMG.label(x-1, y);
         end
@@ -31,7 +31,7 @@ function IMG = U_update_neighbors_rem(IMG, old_label, index)
                 if num_neighbors > 0
                     IMG.SP(old_label).neighbors(neighbor_label) = num_neighbors-1;
                 else
-                    disp('Trying to remove a neighbor that was never added');
+                    disp('U_update_neighbors_rem Trying to remove a neighbor that was never added');
                 end
             end
         end

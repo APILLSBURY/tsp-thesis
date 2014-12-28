@@ -72,7 +72,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         frames(frames>numel(files)) = [];
     end
     oim = imread([root files(1).name]);
-    sp_labels = zeros(size(oim,1), size(oim,2), numel(frames), 'uint32');
+    sp_labels = zeros(size(oim,1), size(oim,2), numel(frames));
     frame_it = 0;
 
     disp('Starting Segmentation');
@@ -84,9 +84,6 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
 
         if (frame_it==1)
             IMG = IMG_init(oim1, params);
-            cd util2;
-            IMG2 = IMG_init(oim1, params);
-            cd ..;
             disp('done IMG_init');
         else
             % optical flow returns actual x and y flow... flip it
@@ -103,47 +100,33 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         oim = oim1;
 
         E = [];
-        E2 = [];
-        it = 0;
+        it = 1;
         IMG.alive_dead_changed = true;
         IMG.SxySyy = [];
         IMG.Sxy = [];
         IMG.Syy = [];
-        IMG2.alive_dead_changed = true;
-        IMG2.SxySyy = [];
-        IMG2.Sxy = [];
-        IMG2.Syy = [];
         converged = false;
         
-        while (~converged && it<5 && frame_it==1)
-            it = it + 1;
+        while (~converged && it<=5 && frame_it==1)
             fprintf('initial while loop: it=%d\n', it);
 
             oldK = IMG.K;
-            oldK2 = IMG2.K;
             IMG.SP_changed(:) = true;
-            IMG2.SP_changed(:) = true;
             disp('splitting');
 
             if (dispOn)
-                display_img(IMG, it, oim, false);
-%                display_img(IMG2, it, oim, true);
+                display_img(IMG, it, oim);
             end
             
             IMG = split_move(IMG,1);
             E(end+1) = U_calc_energy(IMG);
 
-            cd mex2;
-            [IMG2.K, IMG2.label, IMG2.SP, IMG2.SP_changed, IMG2.max_UID, IMG2.alive_dead_changed, IMG2.Sxy,IMG2.Syy,IMG2.SxySyy, newE] = split_move(IMG2,1);
-            E2(end+1) = newE;
-            cd ..;
-
             converged = IMG.K - oldK < 2;
 
             if (dispOn)
-                display_img(IMG, it, oim, false);
-%                display_img(IMG2, it, oim, true);
+                display_img(IMG, it, oim);
             end
+            it = it + 1;
         end
 
         converged = false;
@@ -172,7 +155,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             if (~params.reestimateFlow)
                 IMG.SP_changed = old_SP_changed;
                 disp('localonly_move');
-                tic;IMG = localonly_move(IMG,15);times(2)=toc;
+                tic;IMG = localonly_move(IMG,150);times(2)=toc;
                 SP_changed1 = IMG.SP_changed;
                 SP_changed0 = SP_changed1;
             else
@@ -205,8 +188,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             converged = ~any(~arrayfun(@(x)(isempty(x{1})), {IMG.SP(:).N}) & IMG.SP_changed(1:IMG.K));
 
             if (dispOn)
-                display_img(IMG, it, oim, true);
-%                display_img(IMG2, it, oim, false);
+                display_img(IMG, it, oim);
             end
         end
 
@@ -219,31 +201,18 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
     end
 end
 
-function display_img(IMG, it, oim, is_2)
-    if is_2
-        offset = 2;
-    else
-        offset = 0;
-    end
-    sfigure(1+offset);
+function display_img(IMG, it, oim)
+    sfigure(1);
     subplot(1,1,1);
     imagesc(IMG.label);
     title([num2str(it) ' - ' num2str(numel(unique(IMG.label))-1)]);
 
-    sfigure(2+offset);
+    sfigure(2);
     subplot(1,1,1);
     im = zeros(size(oim,1)+2*IMG.w, size(oim,2)+2*IMG.w, 3);
     im(IMG.w+1:end-IMG.w, IMG.w+1:end-IMG.w, :) = double(oim)/255;
-    if is_2
-        cd mex2;
-        borders = is_border_valsIMPORT(double(reshape(IMG.label+1, [IMG.xdim IMG.ydim])));
-        cd ../util2;
-        im = setPixelColors(im, find(borders), [1 0 0]);
-        cd ..;
-    else
-        borders = is_border_vals(IMG.label);
-        im = setPixelColors(im, find(borders), [1 0 0]);
-    end
+    borders = is_border_vals(IMG.label);
+    im = setPixelColors(im, find(borders), [1 0 0]);
     image(im,'parent',gca);
     %drawnow;
 end

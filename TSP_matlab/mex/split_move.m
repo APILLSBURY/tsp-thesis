@@ -107,24 +107,6 @@ function IMG = move_split_SP(IMG, index)
 end
 
 
-function neighbors = U_find_border_SP(IMG, k, neighbors)
-    for index=find(IMG.SP(k).borders)'
-        [x, y] = get_x_and_y_from_index(index, IMG.xdim);
-        if (x>1 && IMG.label(x-1, y)~=k && IMG.label(x-1, y) > 0)
-            neighbors(IMG.label(x-1, y)) = true;
-        end
-        if (y>1 && IMG.label(x, y-1)~=k && IMG.label(x, y-1) > 0)
-            neighbors(IMG.label(x, y-1)) = true;
-        end
-        if (x<IMG.xdim && IMG.label(x+1, y)~=k && IMG.label(x+1, y) > 0)
-            neighbors(IMG.label(x+1, y)) = true;
-        end
-        if (y<IMG.ydim && IMG.label(x, y+1)~=k && IMG.label(x, y+1) > 0)
-            neighbors(IMG.label(x, y+1)) = true;
-        end
-    end
-end
-
 function IMG = move_split_SP_propose(IMG, index, num_SP, max_E, ksplit, new_ks)
     num_iter = 5;
     SP_bbox = [IMG.xdim, 1, IMG.ydim, 1];
@@ -145,7 +127,7 @@ function IMG = move_split_SP_propose(IMG, index, num_SP, max_E, ksplit, new_ks)
     % we will mess around label matrix for new proposal
     % and recover it from SP.pixels if it doesn't work out
     % merge small connected component in the label matrix
-    IMG = U_connect_newSP(IMG, SP_bbox, num_SP);
+    IMG = U_connect_newSP(IMG, index, SP_bbox, num_SP);
 
     % new super pixels in K+1 and K+2... old super pixel in index
     IMG.SP(index) = SP_empty(IMG.SP(index));
@@ -307,8 +289,8 @@ function IMG = U_Kmeans_plusplus(IMG, index, bbox, num_SP, numiter)
         center(2,:) = IMG.data(seed2,:);
 
     else %old
-        center(1,1:2) = IMG.SP(index).pos.mean;
-        center(1,3:5) = IMG.SP(index).app.mean;
+        center(1,1:2) = NormalD_calc_mean(IMG.SP(index).pos);
+        center(1,3:5) = NormalD_calc_mean(IMG.SP(index).app);
 
         for pix=true_pix
             distvec(pix) = U_dist(IMG.data(pix,:), center(1,:));
@@ -408,7 +390,7 @@ end
 
 % KMerge Version 2: grow region
 
-function IMG = U_connect_newSP(IMG, bbox, num_SP)
+function IMG = U_connect_newSP(IMG, old_k, bbox, num_SP)
     min_x = bbox(1);
     min_y = bbox(3);
     max_x = bbox(2);
@@ -433,7 +415,7 @@ function IMG = U_connect_newSP(IMG, bbox, num_SP)
                 if ~SP_is_empty(IMG, IMG.K+label_count)
                     disp('SP should be null..');
                 end
-                IMG.SP(IMG.K+label_count) = new_SP(IMG.new_pos, IMG.new_app, IMG.max_UID, [0, 0], IMG.N);
+                IMG.SP(IMG.K+label_count) = new_SP(IMG.new_pos, IMG.new_app, IMG.max_UID, [0, 0], IMG.N, IMG.max_SPs);
                 
                 %can't decide whether it will be border yet
                 pixel_bfs=zeros(size(IMG.SP(IMG.K+label_count).pixels));
@@ -472,15 +454,35 @@ function IMG = U_connect_newSP(IMG, bbox, num_SP)
 
     % Now is the time to clean up the border pixels and neighbor ids
     
-    %%THIS IS SUPER INEFFICIENT CHANGE IT WHEN YOUR BRAIN WORKS
-    
-    % BLARG
-    
-    for k=1:IMG.K+label_count
-        IMG.SP(k) = SP_fix_borders(IMG.SP(k), IMG.label);
-        IMG = U_fix_neighbors_self(IMG, k);
+    % remove all neighbors of the original index
+    for k=1:IMG.K
+        IMG.SP(k).neighbors(old_k) = 0;
     end
     
+    
+    % loop through every pixel in the bounding box plus one pixel all around
+    % set border and neighbor values
+    for x=max(1, min_x-1):min(IMG.xdim, max_x+1)
+        for y=max(1, min_y-1):min(IMG.ydim, max_y+1)
+            k = IMG.label(x, y);
+            if k>0
+                index = get_index_from_x_and_y(x, y, IMG.xdim);
+                is_border = U_check_border_pix(IMG, index, k);
+                IMG.SP(k).borders(index) = is_border;
+                if is_border
+                    % 1:IMG.K are already set up for neighbor 1:IMG.K, so
+                    % only update them for the new SPs
+                    if k<=IMG.K
+                        old_neighbors = IMG.SP(k).neighbors(1:IMG.K);
+                    end
+                    IMG.SP(k) = SP_update_neighbors_add_self(IMG.SP(k), IMG.label, index);
+                    if k<=IMG.K
+                        IMG.SP(k).neighbors(1:IMG.K) = old_neighbors;
+                    end
+                end
+            end
+        end
+    end
     
     if (label_count>num_SP)
         %printf("oops... kmeans gives %d connected components\n",label_count);
@@ -488,7 +490,7 @@ function IMG = U_connect_newSP(IMG, bbox, num_SP)
         for i=1:label_count
             pix_counts(i) = IMG.SP(IMG.K+i).N;
         end
-        check_labels = IMG.K+1:IMG.K+label_count;
+        check_labels = (IMG.K+1):(IMG.K+label_count);
         
         [~, ind_counts] = sort(pix_counts, 1, 'ascend');
         
@@ -514,7 +516,7 @@ function IMG = U_connect_newSP(IMG, bbox, num_SP)
         for i=1:num_SP
             while SP_is_empty(IMG, max_k)
                 max_k = max_k+1;
-                if(max_k>IMG.N)
+                if(max_k>IMG.max_SPs)
                     disp('there should be more nonempty SPs..\n');
                 end
             end

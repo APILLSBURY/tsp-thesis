@@ -22,7 +22,7 @@ function label = SP_prop_init(K, label, meanx, meany, vx, vy, mask)
         for y=1:ydim
             %initialize newLabel
             if mask(x, y)
-                newlabel = K;
+                newlabel(x, y) = K;
             end
 
             %find possible labels

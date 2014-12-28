@@ -22,7 +22,7 @@ function SP = SP_update_neighbors_label_rem_check(SP, label, x, y, neighbor_labe
         if neighbor_val > 0
             SP.neighbors(neighbor_label) = neighbor_val - 1;
         else
-            disp('Trying to remove a neighbor that was never added');
+            disp('SP_update_neighbors_label_rem_check Trying to remove a neighbor that was never added');
         end
     end
 end

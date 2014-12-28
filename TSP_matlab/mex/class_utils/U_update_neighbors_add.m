@@ -12,7 +12,7 @@ function IMG = U_update_neighbors_add(IMG, index)
     cur_label = IMG.label(x, y);
     if (cur_label>0)
         [x, y] = get_x_and_y_from_index(index, IMG.xdim);
-        neighbor_labels = ones(1, 4) * cur_label;
+        neighbor_labels = zeros(1, 4);
         if x>1
             neighbor_labels(1) = IMG.label(x-1, y);
         end
@@ -32,7 +32,7 @@ function IMG = U_update_neighbors_add(IMG, index)
             end
         end
 
-        % update the neighbors' neighbors list. (not a typo!)
+        % update the neighbors' neighbors lists. (not a typo!)
         if neighbor_labels(1)>0 && neighbor_labels(1)~=cur_label
             IMG.SP(neighbor_labels(1)) = SP_update_neighbors_label_add_check(IMG.SP(neighbor_labels(1)), IMG.label, x-1, y, cur_label);
         end

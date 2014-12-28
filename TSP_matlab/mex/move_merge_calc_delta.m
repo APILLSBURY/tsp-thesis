@@ -1,11 +1,11 @@
 % --------------------------------------------------------------------------
 % -- move_merge_calc_delta
-% --   calculates the probability of assigning the pixel at index to the
-% -- cluster of nindex (neighbor index).
+% --   calculates the probability of merging the superpixel at k with the
+% --   superpixel at merge_k.
 % --
 % --   parameters:
-% --     - index : the new point to add
-% --     - nindex : the neighbor to add this point to
+% --     - k : the original superpixel
+% --     - merge_k : the superpixel to merge with
 % --------------------------------------------------------------------------
 
 function prob = move_merge_calc_delta(IMG, k, merge_k)

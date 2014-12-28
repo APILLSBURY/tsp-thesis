@@ -5,7 +5,7 @@
 % --------------------------------------------------------------------------
 function IMG = local_move_internal(IMG)
 
-    if (IMG.K>IMG.N)
+    if (IMG.K>IMG.max_SPs)
         disp('Ran out of space!');
     end
 
@@ -26,11 +26,7 @@ function IMG = local_move_internal(IMG)
             %%check to see if we're on a border
             if k>0 && IMG.SP(k).borders(index)
                 % check the topology for this pixel
-                if ~check_topology(IMG, index, neighborhood)
-                    if k>0
-                        IMG.SP(k).borders(index) = true;
-                    end
-                else
+                if check_topology(IMG, index, neighborhood)
                     % temporarily remove this data point from the SP
                     max_prob = -inf;
                     max_k = -2;
@@ -62,18 +58,29 @@ function IMG = local_move_internal(IMG)
                         % update the labels... it moves from k->max_k
                         IMG.label(x, y) = max_k;
                         if (max_k>IMG.K)
+                            disp('Creating a new SP in local_move_internal');
                             % creating a new one
-                            if (IMG.K>=IMG.N)
+                            if (IMG.K>=IMG.max_SPs)
                                 disp('Ran out of space!');
+                            else
+                                IMG.SP(IMG.K+1) = new_SP(IMG.new_pos, IMG.new_app, IMG.max_UID, [0, 0], IMG.N, IMG.max_SPs);
+                                IMG.max_UID = IMG.max_UID + 1;
+                                IMG.K = IMG.K + 1;
+                                max_k = 0; % do this so the program breaks if this happens
                             end
-                            IMG.SP(IMG.K+1) = new_SP(IMG.new_pos, IMG.new_app, IMG.max_UID, [0, 0], IMG.N);
-                            IMG.max_UID = IMG.max_UID + 1;
-                            IMG.K = IMG.K + 1;
                         end
 
-                        % update the neighbors lists
-                        IMG = U_update_neighbors_rem(IMG, k, index);
-                        IMG = U_update_neighbors_add(IMG, index);
+                        
+                        %remove the pixel from k and add it to max_k
+                        if (k>0)
+                            IMG.SP(k) = SP_rem_pixel(IMG.SP(k), IMG.data, index, IMG.boundary_mask(x, y));
+                            IMG = U_update_neighbors_rem(IMG, k, index);
+                        end
+                        if max_k>0
+                            IMG.SP(max_k) = SP_add_pixel(IMG.SP(max_k), IMG.data, index, U_check_border_pix(IMG, index), IMG.boundary_mask(x, y));
+                            IMG = U_update_neighbors_add(IMG, index);
+                        end
+                        
 
                         % set the correct SP_changed variables of all neighbors
                         if (k<1)
@@ -85,24 +92,15 @@ function IMG = local_move_internal(IMG)
                             end
                         end
 
-                        % update all border lists for neighbors
+                        % update border lists for neighboring pixels
                         IMG = U_update_border_changed(IMG, index);
-                        if (k>0)
-                            IMG.SP(k) = SP_rem_pixel(IMG.SP(k), IMG.data, index, IMG.boundary_mask(x, y));
-                        end
 
                         if k>0 && SP_is_empty(IMG, k)
                             if (IMG.SP_old(k))
                                 IMG.alive_dead_changed = true;
                             else
-                                IMG.SP(k) = SP_empty(IMG.SP(k));
                                 IMG.SP_changed(k) = false;
                             end
-                        end
-
-                        % add this point to the maximum SP
-                        if max_k>0
-                            IMG.SP(max_k) = SP_add_pixel(IMG.SP(max_k), IMG.data, index, U_check_border_pix(IMG, index), IMG.boundary_mask(x, y));
                         end
                     end
                 end
