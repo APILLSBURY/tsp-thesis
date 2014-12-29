@@ -161,7 +161,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             else
                 disp('local and localonly');
                 IMG.SP_changed = old_SP_changed;
-                tic;IMG = local_move(IMG,1000);times(1)=toc;
+                tic;IMG = local_move(IMG,50);times(1)=toc;
                 SP_changed0 = IMG.SP_changed;
                 IMG.SP_changed = old_SP_changed;
                 tic;IMG = localonly_move(IMG,5);times(2)=toc;
@@ -214,7 +214,7 @@ function display_img(IMG, it, oim)
     borders = is_border_vals(IMG.label);
     im = setPixelColors(im, find(borders), [1 0 0]);
     image(im,'parent',gca);
-    %drawnow;
+    drawnow;
 end
 
 

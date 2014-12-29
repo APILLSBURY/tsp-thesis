@@ -4,7 +4,6 @@
 % -- a super pixel at random and loops through and updates its borders.
 % --------------------------------------------------------------------------
 function IMG = local_move_internal(IMG)
-
     if (IMG.K>IMG.max_SPs)
         disp('Ran out of space!');
     end
@@ -18,12 +17,13 @@ function IMG = local_move_internal(IMG)
     permx = randperm(IMG.xdim-2*IMG.w) + IMG.w;
     permy = randperm(IMG.ydim-2*IMG.w) + IMG.w;
     
+    
     % First check all the pixels on the actual image
     for x=permx
         for y=permy
             k = IMG.label(x, y);
             index = get_index_from_x_and_y(x, y, IMG.xdim);
-            %%check to see if we're on a border
+            %%check to see if we're on a border and check topology
             if k>0 && IMG.SP(k).borders(index)
                 % check the topology for this pixel
                 if check_topology(IMG, index, neighborhood)

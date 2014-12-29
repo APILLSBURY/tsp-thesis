@@ -9,5 +9,5 @@
 function nd = NormalD_update_stats_new1(nd, nd_other)
    nd.temp_N = nd.N + nd_other.N;
    nd.temp_total = nd.total + nd_other.total;
-   nd.temp_total2 = nd.total2 + nd_other.total2.^2;
+   nd.temp_total2 = nd.total2 + nd_other.total2;
 end

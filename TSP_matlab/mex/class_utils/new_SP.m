@@ -13,4 +13,5 @@ function SP = new_SP(pos, app, UID, prev_v, N, max_SPs)
     SP.neighbors = zeros(max_SPs, 1);
     SP.log_likelihood = NormalD_calc_logposterior(pos) + NormalD_calc_logposterior(app);
     SP.log_likelihood_empty = SP.log_likelihood;
+    SP.v = [0, 0];
 end

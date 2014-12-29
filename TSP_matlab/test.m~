@@ -1,0 +1,7 @@
+addpath('mex/');
+tic;
+localonly_move(IMG, 20);
+toc;
+tic;
+localonly_move2(IMG, 20);h
+toc;

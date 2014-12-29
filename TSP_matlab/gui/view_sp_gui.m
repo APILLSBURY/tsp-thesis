@@ -430,7 +430,7 @@ function [im] = display_borders_all(handles)
 mask = ismember(handles.sp_labels(:,:,handles.f), handles.SPs);
 im = setPixelColors(handles.oim, find(mask), [0 1 0]);
 
-borders = is_border_valsIMPORT(double(handles.sp_labels(:,:,handles.f)));
+borders = is_border_vals(handles.sp_labels(:,:,handles.f));
 im = setPixelColors(im, find(borders), [1 0 0]);
 axes(handles.axes1);
 hold off;
@@ -457,7 +457,7 @@ for c=1:handles.C
         im(indices+2*N) = im(indices+2*N)*transparent + (1-transparent)*color(3);
 
         
-        borders = is_border_valsIMPORT(double(handles.sp_labels(:,:,handles.f)).*cmask);
+        borders = is_border_vals(handles.sp_labels(:,:,handles.f)).*cmask;
         borders = borders & (cmask | bgmask);
         im = setPixelColors(im, find(borders), color);
         im2 = setPixelColors(im2, find(cmask), color);
@@ -610,7 +610,7 @@ for f=handles.frames
             im(indices+2*N) = im(indices+2*N)*transparent + (1-transparent)*color(3);
 
 
-            borders = is_border_valsIMPORT(double(handles.sp_labels(:,:,f)).*cmask);
+            borders = is_border_vals(handles.sp_labels(:,:,f)).*cmask;
             borders = borders & (cmask | bgmask);
             im = setPixelColors(im, find(borders), color);
         end

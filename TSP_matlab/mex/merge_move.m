@@ -43,26 +43,24 @@ function IMG = merge_move(IMG, its)
                 % fix neighbors for the next super pixel
                 neighbors = false(size(neighbors));
 
+                fprintf('max_E = %f\n', max_E);
                 % merge if it increases energy
                 if (max_E>0)
                     disp('max e is greater than 0');
                     % change the labels
-                    for index=1:length(IMG.SP(max_k).pixels)
-                        if IMG.SP(max_k).pixels(index)
-                            [x, y] = get_x_and_y_from_index(index, IMG.xdim);
-                            IMG.label(x, y) = k;
-                        end
+                    for index=find(IMG.SP(max_k).pixels)'
+                        [x, y] = get_x_and_y_from_index(index, IMG.xdim);
+                        IMG.label(x, y) = k;
                     end
                     IMG.SP_changed(k) = true;
                     IMG.SP_changed(max_k) = true;
 
-                    IMG.SP(k) = SP_merge_with(IMG.SP(k), IMG.SP(max_k), IMG.label);
-                    IMG.SP(max_k) = SP_empty(IMG.SP(max_k));
-                    if (~IMG.SP_old(max_k))
-                        IMG.SP(max_k) = SP_empty(IMG.SP(max_k)); %VERY QUESTIONABLE
-                    else
+                    IMG = U_merge_SPs(IMG, k, max_k);
+                    if IMG.SP_old(max_k)
                         IMG.alive_dead_changed = true;
                     end
+                    
+                    %ELSE DELETE IMG.SP(max_k)?
                 end
             end
         end

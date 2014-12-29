@@ -39,10 +39,10 @@ function IMG = split_move(IMG, its)
                 IMG = move_split_SP(IMG, k);
                 
                 %REMOVE EXCESS SPs
-                sp = numel(IMG.SP); 
-                while SP_is_empty(IMG, sp)
-                    IMG.SP(sp) = [];
-                    sp = sp - 1;
+                SP = numel(IMG.SP); 
+                while SP_is_empty(IMG, SP) && SP>Nsp
+                    IMG.SP(SP) = [];
+                    SP = SP - 1;
                 end
             end
         end

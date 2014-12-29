@@ -1543,7 +1543,6 @@ void IMG::move_merge_IMG()
          // merge if it increases energy
          if (max_E>0)
          {
-             mexPrintf("mergin");
             merged = true;
             // change the labels
             node = SP_arr[max_k]->pixels.getFirst();
