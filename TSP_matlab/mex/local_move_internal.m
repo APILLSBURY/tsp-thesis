@@ -4,7 +4,7 @@
 % -- a super pixel at random and loops through and updates its borders.
 % --------------------------------------------------------------------------
 function IMG = local_move_internal(IMG)
-    if (IMG.K>IMG.max_SPs)
+    if (IMG.K>IMG.N)
         disp('Ran out of space!');
     end
 
@@ -14,19 +14,55 @@ function IMG = local_move_internal(IMG)
     neighborhood = false(9,1);
 
     % choose a random order of super pixels
-    permx = randperm(IMG.xdim-2*IMG.w) + IMG.w;
-    permy = randperm(IMG.ydim-2*IMG.w) + IMG.w;
+    perm = randperm(IMG.K);
+
+    %keep a list of pixels we've checked so we don't re-check any
+    have_not_checked = true(IMG.N, 1);
     
-    
-    % First check all the pixels on the actual image
-    for x=permx
-        for y=permy
-            k = IMG.label(x, y);
-            index = get_index_from_x_and_y(x, y, IMG.xdim);
-            %%check to see if we're on a border and check topology
-            if k>0 && IMG.SP(k).borders(index)
+    % MM STEP
+    for for_k=perm
+        % find a nonempty super pixel
+        if ~SP_is_empty(IMG, for_k) && IMG.SP_changed(for_k)
+            IMG.SP_changed(for_k) = false;
+            
+            % loop through borders
+            found_borders = find(IMG.SP(for_k).borders & have_not_checked)';
+            border_length = length(found_borders);
+            bfs_length = 5 * border_length;
+            bfs_queue = zeros(bfs_length,1);
+            bfs_index = 1;
+            
+            i = 1;
+            while i<=border_length+bfs_length
+                if SP_is_empty(IMG, for_k)
+                    break;
+                end
+                if i<=border_length
+                    k = for_k;
+                    index = found_borders(i);
+                    have_not_checked(index) = false;
+                    [x, y] = get_x_and_y_from_index(index, IMG.xdim);
+                else
+                    if bfs_queue(i - border_length)>0
+                        index = bfs_queue(i - border_length);
+                    else
+                        break;
+                    end
+                    [x, y] = get_x_and_y_from_index(index, IMG.xdim);
+                    k = IMG.label(x, y);
+                    if k>0
+                        i = i+1;
+                        continue;
+                    end
+                end
+                i = i+1;
+
                 % check the topology for this pixel
-                if check_topology(IMG, index, neighborhood)
+                if ~check_topology(IMG, index, neighborhood)
+                    if k>0
+                        IMG.SP(k).borders(index) = true;
+                    end
+                else
                     % temporarily remove this data point from the SP
                     max_prob = -inf;
                     max_k = -2;
@@ -52,35 +88,26 @@ function IMG = local_move_internal(IMG)
                         [max_prob, max_k] = move_local_calc_delta(IMG, index, IMG.label(x, y+1), true, max_prob, max_k);
                     end
 
-
-                    if max_k~=k
+                    
+                    if (max_k==k && k>0)
+                        IMG.SP(k).borders(index) = true;
+                    elseif max_k~=k
                         IMG.changed = true;
                         % update the labels... it moves from k->max_k
                         IMG.label(x, y) = max_k;
                         if (max_k>IMG.K)
-                            disp('Creating a new SP in local_move_internal');
                             % creating a new one
-                            if (IMG.K>=IMG.max_SPs)
+                            if (IMG.K>=IMG.N)
                                 disp('Ran out of space!');
-                            else
-                                IMG.SP(IMG.K+1) = new_SP(IMG.new_pos, IMG.new_app, IMG.max_UID, [0, 0], IMG.N, IMG.max_SPs);
-                                IMG.max_UID = IMG.max_UID + 1;
-                                IMG.K = IMG.K + 1;
-                                max_k = 0; % do this so the program breaks if this happens
                             end
+                            IMG.SP(IMG.K+1) = new_SP(IMG.new_pos, IMG.new_app, IMG.max_UID, [0, 0], IMG.N);
+                            IMG.max_UID = IMG.max_UID + 1;
+                            IMG.K = IMG.K + 1;
                         end
 
-                        
-                        %remove the pixel from k and add it to max_k
-                        if (k>0)
-                            IMG.SP(k) = SP_rem_pixel(IMG.SP(k), IMG.data, index, IMG.boundary_mask(x, y));
-                            IMG = U_update_neighbors_rem(IMG, k, index);
-                        end
-                        if max_k>0
-                            IMG.SP(max_k) = SP_add_pixel(IMG.SP(max_k), IMG.data, index, U_check_border_pix(IMG, index), IMG.boundary_mask(x, y));
-                            IMG = U_update_neighbors_add(IMG, index);
-                        end
-                        
+                        % update the neighbors lists
+                        IMG = U_update_neighbors_rem(IMG, k, index);
+                        IMG = U_update_neighbors_add(IMG, index);
 
                         % set the correct SP_changed variables of all neighbors
                         if (k<1)
@@ -92,73 +119,47 @@ function IMG = local_move_internal(IMG)
                             end
                         end
 
-                        % update border lists for neighboring pixels
+
+                        % update all border lists for neighbors
                         IMG = U_update_border_changed(IMG, index);
+                        if (k>0)
+                            IMG.SP(k) = SP_rem_pixel(IMG.SP(k), IMG.data, index, IMG.boundary_mask(x, y));
+                        end
 
                         if k>0 && SP_is_empty(IMG, k)
                             if (IMG.SP_old(k))
                                 IMG.alive_dead_changed = true;
                             else
+                                IMG.SP(k) = SP_empty(IMG.SP(k));
                                 IMG.SP_changed(k) = false;
                             end
                         end
+
+                        % add this point to the maximum SP
+                        if max_k>0
+                            IMG.SP(max_k) = SP_add_pixel(IMG.SP(max_k), IMG.data, index, U_check_border_pix(IMG, index), IMG.boundary_mask(x, y));
+                        end
+                    end
+                    if (x>1 && IMG.label(x-1, y)<1 && bfs_index <= bfs_length)
+                        bfs_queue(bfs_index) = index-1;
+                        bfs_index = bfs_index + 1;
+                    end
+                    if (y>1 && IMG.label(x, y-1)<1 && bfs_index <= bfs_length)
+                        bfs_queue(bfs_index) = index-IMG.xdim;
+                        bfs_index = bfs_index + 1;
+                    end
+                    if (x<IMG.xdim && IMG.label(x+1, y)<1 && bfs_index <= bfs_length)
+                        bfs_queue(bfs_index) = index+1;
+                        bfs_index = bfs_index + 1;
+                    end
+                    if (y<IMG.ydim && IMG.label(x, y+1)<1 && bfs_index <= bfs_length)
+                        bfs_queue(bfs_index) = index+IMG.xdim;
+                        bfs_index = bfs_index + 1;
                     end
                 end
             end
         end
     end
-        
-%             % find a nonempty super pixel
-%                 IMG.SP_changed(k) = false;
-%                 % loop through borders
-%                 border_length = length(found_borders);
-%                 bfs_length = 5 * border_length;
-%                 bfs_queue = zeros(bfs_length,1);
-%                 bfs_index = 1;
-% 
-%                 i = 1;
-%                 while (i<=border_length+bfs_length)
-%                     if SP_is_empty(IMG, for_k)
-%                         break;
-%                     end
-%                     if i<=border_length
-%                         k = for_k;
-%                         index = found_borders(i);
-%                         [x, y] = get_x_and_y_from_index(index, IMG.xdim);
-%                     else
-%                         if bfs_queue(i - border_length) ~= 0
-%                             index = bfs_queue(i - border_length);
-%                         else
-%                             break;
-%                         end
-%                         [x, y] = get_x_and_y_from_index(index, IMG.xdim);
-%                         k = IMG.label(x, y);
-%                         if k>0
-%                             i = i+1;
-%                             continue;
-%                         end
-%                     end
-%                     i = i+1;
-%                     
-%                     do your thing
-%                     
-%                     
-%                         if (x>1 && IMG.label(x-1, y)<1 && bfs_index <= bfs_length)
-%                             bfs_queue(bfs_index) = index-1;
-%                             bfs_index = bfs_index + 1;
-%                         end
-%                         if (y>1 && IMG.label(x, y-1)<1 && bfs_index <= bfs_length)
-%                             bfs_queue(bfs_index) = index-IMG.xdim;
-%                             bfs_index = bfs_index + 1;
-%                         end
-%                         if (x<IMG.xdim && IMG.label(x+1, y)<1 && bfs_index <= bfs_length)
-%                             bfs_queue(bfs_index) = index+1;
-%                             bfs_index = bfs_index + 1;
-%                         end
-%                         if (y<IMG.ydim && IMG.label(x, y+1)<1 && bfs_index <= bfs_length)
-%                             bfs_queue(bfs_index) = index+IMG.xdim;
-%                             bfs_index = bfs_index + 1;
-%                         end
     if (~IMG.changed)
         IMG.SP_changed(1:IMG.K) = false;
     end

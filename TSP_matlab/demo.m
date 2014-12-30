@@ -19,13 +19,13 @@
 %% infer the TSPs
 
 % parameters for TSPs
-K = 20;
+K = 30;
 root = 'sequences/my_wheelock/';
 files = dir([root '*.jpg']);
 dispOn = true;
 
 % infer the TSPs
-[sp_labels1] = TSP(K, root, files, dispOn);
+[sp_labels1] = TSP(K, root, files, dispOn, 1:2);
 
 % save the results
 save('results/sp_labels1_wheelock.mat', 'sp_labels1');
