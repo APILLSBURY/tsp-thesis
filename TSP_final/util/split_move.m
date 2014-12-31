@@ -14,7 +14,6 @@
 
 
 function IMG = split_move(IMG, its)
-    addpath('mex/class_utils/');
     for i=1:its
         % choose a random order of super pixels
         Nsp = numel(IMG.SP);
@@ -541,7 +540,7 @@ function [max_E, max_k] = move_merge_SP_propose_region(IMG, k, neighbors, check_
     true_neighbors = find(neighbors)';
     for merge_k=intersect(true_neighbors, check_labels)
         % calculate the energy
-        tmp_E = move_merge_calc_delta(IMG, k, merge_k);
+        tmp_E = U_move_merge_calc_delta(IMG, k, merge_k);
         if(tmp_E>max_E)
             max_E = tmp_E;
             max_k = merge_k;

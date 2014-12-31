@@ -12,7 +12,6 @@
 % == Converted to MATLAB by Andrew Pillsbury 12-4-2014
 % =============================================================================
 function IMG = local_move(IMG, its)
-    addpath('mex/class_utils/');
     for i=1:its
         IMG = Flow_QP2(IMG);
         IMG = local_move_internal(IMG);

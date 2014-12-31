@@ -26,7 +26,7 @@ function IMG = local_move_internal(IMG)
             IMG.SP_changed(for_k) = false;
             
             % loop through borders
-            found_borders = find(IMG.SP(for_k).borders && have_not_checked)';
+            found_borders = find(IMG.SP(for_k).borders & have_not_checked)';
             border_length = length(found_borders);
             bfs_length = 5 * border_length;
             bfs_queue = zeros(bfs_length,1);

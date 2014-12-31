@@ -13,7 +13,6 @@
 % =============================================================================
 
 function IMG = switch_move(IMG)
-    addpath('mex/class_utils/');
     empty_SPs = false(IMG.K, 1);
     for k=1:IMG.K
         if SP_is_empty(IMG, k) && IMG.SP_old(k)

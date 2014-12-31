@@ -13,7 +13,6 @@
 % =============================================================================
 
 function IMG = localonly_move(IMG, its)
-    addpath('mex/class_utils/');
     for i=1:its
         fprintf('its=%d\n', i);
         IMG = local_move_internal(IMG);

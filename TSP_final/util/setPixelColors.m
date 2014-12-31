@@ -1,5 +1,4 @@
 function [output] = setPixelColors(input, indices, color)
-    addpath('mex/class_utils/');
     [xdim, ydim] = size(input);
     output = input;
     for index=indices'

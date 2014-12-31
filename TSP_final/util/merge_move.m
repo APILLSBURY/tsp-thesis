@@ -12,7 +12,6 @@
 % =============================================================================
 
 function IMG = merge_move(IMG, its)
-    addpath('mex/class_utils/');
 
     for i=1:its
         % choose a random order of super pixels
@@ -33,7 +32,7 @@ function IMG = merge_move(IMG, its)
 
                 % loop through all neighbors
                 for merge_k=find(neighbors)'
-                    new_E = move_merge_calc_delta(IMG, k, merge_k);
+                    new_E = U_move_merge_calc_delta(IMG, k, merge_k);
                     if new_E > max_E || max_k==-1
                         max_E = new_E;
                         max_k = merge_k;
