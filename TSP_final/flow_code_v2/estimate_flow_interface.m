@@ -48,7 +48,7 @@ if nargin < 3
 end;
 
 if (~isdeployed)
-    addpath(genpath('utils'));
+    addpath(genpath('flow_code_v2/utils/'));
 end
 
 % Load default parameters
