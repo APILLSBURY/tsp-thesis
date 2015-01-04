@@ -11,7 +11,7 @@
 % == Converted to MATLAB by Andrew Pillsbury 12-12-2014
 % =============================================================================
 
-function label = SP_prop_init(K, label, meanx, meany, vx, vy, mask)
+function newlabel = SP_prop_init(K, label, meanx, meany, vx, vy, mask)
 
     [xdim, ydim] = size(label);
     N = xdim*ydim;
@@ -186,15 +186,21 @@ function label = SP_prop_init(K, label, meanx, meany, vx, vy, mask)
         count=count+1;
     end
 
-    for x=1:xdim
-        for y=1:ydim
-            if ~done(x, y)
-                if mask(x, y)
-                    disp('SP_prop_init exceeded tries');
-                else
-                    newlabel(x, y) = 0;
-                end
-            end
-        end
+    if any(mask(~done))
+        disp('SP_prop_init exceeded tries');
+    else
+        newlabel(~done & ~mask) = 0;
     end
+    
+%     for x=1:xdim
+%         for y=1:ydim
+%             if ~done(x, y)
+%                 if mask(x, y)
+%                     disp('SP_prop_init exceeded tries');
+%                 else
+%                     newlabel(x, y) = 0;
+%                 end
+%             end
+%         end
+%     end
 end

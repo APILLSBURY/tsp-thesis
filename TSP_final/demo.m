@@ -25,7 +25,7 @@ files = dir([root '*.jpg']);
 dispOn = true;
 
 % infer the TSPs
-[sp_labels1] = TSP(K, root, files, dispOn, 1:2);
+[sp_labels1] = TSP(K, root, files, dispOn);
 
 % save the results
 save('results/sp_labels1_wheelock.mat', 'sp_labels1');

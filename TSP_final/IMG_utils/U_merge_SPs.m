@@ -21,7 +21,11 @@ function IMG = U_merge_SPs(IMG, index, index_other)
     
     %update neighbors' neighbors lists
     for n=find(IMG.SP(index_other).neighbors)'
-        if IMG.SP(n).neighbors(index)>0
+        if n>numel(IMG.SP)
+            disp('wat is happening');
+            disp(n);
+            disp(numel(IMG.SP));
+        elseif IMG.SP(n).neighbors(index)>0
             IMG = U_fix_neighbors_self(IMG, n);
         else
             IMG.SP(n).neighbors(index) = IMG.SP(n).neighbors(index_other);

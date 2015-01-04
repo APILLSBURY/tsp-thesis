@@ -93,6 +93,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
 
             vx = -flow.bvx;
             vy = -flow.bvy;
+            save('pre_prop.mat');
             IMG = IMG_prop(oim1,vy,vx,IMG);
         end
 

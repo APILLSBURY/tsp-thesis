@@ -77,6 +77,9 @@ function IMG = IMG_prop(img, vx, vy, IMG)
 
         %2.2 Pixel statistics
         IMG.SP(k).N = 0;
+        IMG.SP(k).pixels = false(size(IMG.SP(k).pixels));
+        IMG.SP(k).borders = false(size(IMG.SP(k).borders));
+        IMG.SP(k).neighbors = zeros(size(IMG.SP(k).neighbors));
         IMG.SP_old(k) = true;
 
         IMG.SP(k).pos.theta = IMG.prev_pos_mean(k, :);
