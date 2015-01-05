@@ -1,11 +1,10 @@
-function [covariance, precision] = get_gp_covariance(label, mu, cov_var_a, cov_var_p, iid_var)
+function [covariance, precision] = get_gp_covariance(mu, cov_var_a, cov_var_p, iid_var)
 
 if (~exist('iid_var', 'var') || isempty(iid_var))
     iid_var = 0;
 end
 
-all_unique_label = unique(label(label>0));
-num_SPs = numel(all_unique_label);
+num_SPs = size(mu, 1);
 covariance = zeros(num_SPs);
     
 for SP_index=1:num_SPs

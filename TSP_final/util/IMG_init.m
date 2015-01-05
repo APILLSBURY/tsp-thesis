@@ -58,7 +58,7 @@ IMG.hyper.a_Sigma(:) = 1;
 IMG.K = round(params.K*params.Kpercent);
 IMG.label = random_init(IMG.xdim, IMG.ydim, IMG.w, IMG.K);
 IMG.label(~IMG.boundary_mask) = 0;
-IMG.max_SPs = IMG.K + IMG.area;
+IMG.max_SPs = max(IMG.K + IMG.area, IMG.K * 20);
 
 % 3. Topology Table Look Up
 load topology_tables;

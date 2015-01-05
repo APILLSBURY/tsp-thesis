@@ -53,7 +53,7 @@ function IMG = IMG_prop(img, vx, vy, IMG)
     mu_p = bsxfun(@times, IMG.prev_pos_mean, sqrt(IMG.hyper.op_Sigma));
     mu_a = bsxfun(@times, IMG.prev_app_mean, sqrt(IMG.hyper.oa_Sigma));
     mu = [mu_p, mu_a];
-    [IMG.prev_covariance, IMG.prev_precision] = get_gp_covariance(IMG.label, mu, IMG.cov_var_a, IMG.cov_var_p, IMG.hyper.p_Delta(1));
+    [IMG.prev_covariance, IMG.prev_precision] = get_gp_covariance(mu, IMG.cov_var_a, IMG.cov_var_p, IMG.hyper.p_Delta(1));
 
     vx_extended = holdpad(vx, size(IMG.label,1),size(IMG.label,2));
     vy_extended = holdpad(vy, size(IMG.label,1),size(IMG.label,2));

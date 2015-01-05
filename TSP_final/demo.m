@@ -19,7 +19,7 @@
 %% infer the TSPs
 
 % parameters for TSPs
-K = 30;
+K = 200;
 root = 'sequences/my_wheelock/';
 files = dir([root '*.jpg']);
 dispOn = true;
