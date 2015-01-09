@@ -8,28 +8,31 @@
 % --     - old_label : the label of the pixel before it was changed
 % --     - index : the index bordering the removed pixel
 % --------------------------------------------------------------------------
-function IMG = U_update_neighbors_rem(IMG, old_label, index)
-    if (old_label>0)
-        [x, y] = get_x_and_y_from_index(index, IMG.xdim);
+function IMG_SP = U_update_neighbors_rem(IMG_label, IMG_SP, old_label, index)
+    [xdim, ydim] = size(IMG_label);
+    if old_label>0
+        [x, y] = get_x_and_y_from_index(index, xdim);
         neighbor_labels = zeros(1, 4);
         if x>1
-            neighbor_labels(1) = IMG.label(x-1, y);
+            neighbor_labels(1) = IMG_label(x-1, y);
         end
-        if x<IMG.xdim
-            neighbor_labels(2) = IMG.label(x+1, y);
+        if x<xdim
+            neighbor_labels(2) = IMG_label(x+1, y);
         end
         if y>1
-            neighbor_labels(3) = IMG.label(x, y-1);
+            neighbor_labels(3) = IMG_label(x, y-1);
         end
-        if y<IMG.ydim
-            neighbor_labels(4) = IMG.label(x, y+1);
+        if y<ydim
+            neighbor_labels(4) = IMG_label(x, y+1);
         end
 
-        for neighbor_label=unique(neighbor_labels)
+        unique_neighbors = unique(neighbor_labels);
+        for nindex = 1:length(unique_neighbors);
+            neighbor_label=unique_neighbors(nindex);
             if neighbor_label > 0 && neighbor_label ~= old_label
-                num_neighbors = IMG.SP(old_label).neighbors(neighbor_label);
+                num_neighbors = IMG_SP(old_label).neighbors(neighbor_label);
                 if num_neighbors > 0
-                    IMG.SP(old_label).neighbors(neighbor_label) = num_neighbors-1;
+                    IMG_SP(old_label).neighbors(neighbor_label) = num_neighbors-1;
                 else
                     disp('U_update_neighbors_rem Trying to remove a neighbor that was never added');
                 end
@@ -38,16 +41,16 @@ function IMG = U_update_neighbors_rem(IMG, old_label, index)
 
         % update the neighbors' neighbors list. (not a typo!)
         if neighbor_labels(1)>0 && neighbor_labels(1)~=old_label
-            IMG.SP(neighbor_labels(1)) = SP_update_neighbors_label_rem_check(IMG.SP(neighbor_labels(1)), IMG.label, x-1, y, old_label);
+            IMG_SP(neighbor_labels(1)) = SP_update_neighbors_label_rem_check(IMG_SP(neighbor_labels(1)), IMG_label, x-1, y, old_label);
         end
         if neighbor_labels(2)>0 && neighbor_labels(2)~=old_label
-            IMG.SP(neighbor_labels(2)) = SP_update_neighbors_label_rem_check(IMG.SP(neighbor_labels(2)), IMG.label, x+1, y, old_label);
+            IMG_SP(neighbor_labels(2)) = SP_update_neighbors_label_rem_check(IMG_SP(neighbor_labels(2)), IMG_label, x+1, y, old_label);
         end
         if neighbor_labels(3)>0 && neighbor_labels(3)~=old_label
-            IMG.SP(neighbor_labels(3)) = SP_update_neighbors_label_rem_check(IMG.SP(neighbor_labels(3)), IMG.label, x, y-1, old_label);
+            IMG_SP(neighbor_labels(3)) = SP_update_neighbors_label_rem_check(IMG_SP(neighbor_labels(3)), IMG_label, x, y-1, old_label);
         end
         if neighbor_labels(4)>0 && neighbor_labels(4)~=old_label
-            IMG.SP(neighbor_labels(4)) = SP_update_neighbors_label_rem_check(IMG.SP(neighbor_labels(4)), IMG.label, x, y+1, old_label);
+            IMG_SP(neighbor_labels(4)) = SP_update_neighbors_label_rem_check(IMG_SP(neighbor_labels(4)), IMG_label, x, y+1, old_label);
         end
     end
 end

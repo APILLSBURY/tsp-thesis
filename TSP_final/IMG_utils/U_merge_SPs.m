@@ -9,35 +9,37 @@
 % --     - border_ptr : the linked list borders to fix
 % --     - (xdim, ydim) : image dimensions
 % --------------------------------------------------------------------------
-function IMG = U_merge_SPs(IMG, index, index_other)
+function IMG_SP = U_merge_SPs(IMG_SP, IMG_label, index, index_other)
     % update the MIW stuff
-    IMG.SP(index).N = IMG.SP(index).N + IMG.SP(index_other).N;
-    IMG.SP(index).pixels = IMG.SP(index).pixels + IMG.SP(index_other).pixels;
-    IMG.SP(index).app = NormalD_merge(IMG.SP(index).app, IMG.SP(index_other).app);
-    IMG.SP(index).pos = NormalD_merge(IMG.SP(index).pos, IMG.SP(index_other).pos);
+    IMG_SP(index).N = IMG_SP(index).N + IMG_SP(index_other).N;
+    IMG_SP(index).pixels = IMG_SP(index).pixels + IMG_SP(index_other).pixels;
+    IMG_SP(index).app = NormalD_merge(IMG_SP(index).app, IMG_SP(index_other).app);
+    IMG_SP(index).pos = NormalD_merge(IMG_SP(index).pos, IMG_SP(index_other).pos);
     
     % update the border pixels
-    IMG.SP(index) = SP_fix_borders(IMG.SP(index), IMG.label);
+    IMG_SP(index) = SP_fix_borders(IMG_SP(index), IMG_label);
     
     %update neighbors' neighbors lists
-    for n=find(IMG.SP(index_other).neighbors)'
-        if n>numel(IMG.SP)
+    found_neighbors = find(IMG_SP(index_other).neighbors);
+    for nindex=1:length(found_neighbors)
+        n = found_neighbors(nindex);
+        if n>numel(IMG_SP)
             disp('wat is happening');
             disp(n);
-            disp(numel(IMG.SP));
-        elseif IMG.SP(n).neighbors(index)>0
+            disp(numel(IMG_SP));
+        elseif IMG_SP(n).neighbors(index)>0
             IMG = U_fix_neighbors_self(IMG, n);
         else
-            IMG.SP(n).neighbors(index) = IMG.SP(n).neighbors(index_other);
-            IMG.SP(n).neighbors(index_other) = 0;
+            IMG_SP(n).neighbors(index) = IMG_SP(n).neighbors(index_other);
+            IMG_SP(n).neighbors(index_other) = 0;
         end
     end
     
     %update index and index_other's neighbor lists
-    IMG.SP(index).neighbors = IMG.SP(index).neighbors + IMG.SP(index_other).neighbors;
-    IMG.SP(index).neighbors(index) = 0;
-    IMG.SP(index).neighbors(index_other) = 0;
+    IMG_SP(index).neighbors = IMG_SP(index).neighbors + IMG_SP(index_other).neighbors;
+    IMG_SP(index).neighbors(index) = 0;
+    IMG_SP(index).neighbors(index_other) = 0;
     
-    IMG.SP(index) = SP_calculate_log_probs(IMG.SP(index));
-    IMG.SP(index_other) = SP_empty(IMG.SP(index_other));
+    IMG_SP(index) = SP_calculate_log_probs(IMG_SP(index));
+    IMG_SP(index_other) = SP_empty(IMG_SP(index_other));
 end
