@@ -32,16 +32,16 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
     addpath('IMG_utils/');
 
 
-    params.cov_var_p = 1000;
-    params.cov_var_a = 100;
-    params.area_var = 400;
-    params.alpha = -15;
-    params.beta = -10;
-    params.deltap_scale = 1e-3;
-    params.deltaa_scale = 100;
-    params.K = K;
-    params.Kpercent = 0.8;
-    params.reestimateFlow = false;
+    IMG_params.cov_var_p = 1000;
+    IMG_params.cov_var_a = 100;
+    IMG_params.area_var = 400;
+    IMG_params.alpha = -15;
+    IMG_params.beta = -10;
+    IMG_params.deltap_scale = 1e-3;
+    IMG_params.deltaa_scale = 100;
+    IMG_params.K = K;
+    IMG_params.Kpercent = 0.5;
+    IMG_params.reestimateFlow = false;
 
     if (~exist('dispOn','var') || isempty(dispOn))
         dispOn = true;
@@ -82,7 +82,114 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         oim1 = imread([root files(f).name]);
 
         if (frame_it==1)
-            IMG = IMG_init(oim1, params);
+            
+            % INITIALIZE IMAGE
+            disp('initializing IMG');
+     
+            IMG_params.cov_var_a;
+            IMG_params.cov_var_p;
+            IMG_alive_dead_changed = true;
+
+            % Build IMG structure
+
+            % 1. image statistics
+            IMG_oxdim = size(oim1,1);
+            IMG_oydim = size(oim1,2);
+
+            N = IMG_oxdim*IMG_oydim;
+            IMG_area = N/IMG_params.K;
+            IMG_area_var = IMG_params.area_var;
+
+
+            IMG_w = round(2*sqrt(IMG_area/pi)); %used to be *2
+
+            IMG_xdim = IMG_oxdim + 2*IMG_w;
+            IMG_ydim = IMG_oydim + 2*IMG_w;
+
+            IMG_boundary_mask = false(IMG_xdim, IMG_ydim);
+            IMG_boundary_mask(IMG_w+1:end-IMG_w, IMG_w+1:end-IMG_w) = true;
+            IMG_N = IMG_xdim * IMG_ydim;
+
+
+            IMG_log_alpha = IMG_params.alpha * IMG_area;
+            IMG_log_beta = IMG_params.beta * IMG_area;
+            Sigma = IMG_area^2 / (-12.5123*IMG_log_alpha);
+
+
+            IMG_hyper.p_Sigma = [Sigma Sigma];
+            IMG_hyper.p_Delta = [Sigma*2 Sigma*2]*IMG_params.deltap_scale;
+            IMG_hyper.a_Sigma = [Sigma*2 Sigma Sigma]*IMG_params.K/100;
+            IMG_hyper.a_Delta = [Sigma*20 Sigma*10 Sigma*10]/IMG_params.deltaa_scale;
+
+            r = sqrt(IMG_area / pi);
+            IMG_dummy_log_prob = (-0.5 * r^2/IMG_hyper.p_Sigma(1)) - log(2*pi .* IMG_hyper.p_Sigma(1));
+
+            IMG_hyper.p_theta = [0 0];
+            IMG_hyper.a_theta = [0 0 0];
+            IMG_hyper.op_Sigma = IMG_hyper.p_Sigma;
+            IMG_hyper.oa_Sigma = IMG_hyper.a_Sigma;
+
+            IMG_data = SP_img2data(oim1, IMG_w);
+            IMG_data = rescale_data(IMG_data, IMG_hyper.op_Sigma, IMG_hyper.oa_Sigma);
+
+            IMG_hyper.p_theta = IMG_hyper.p_theta ./ sqrt(IMG_hyper.p_Sigma);
+            IMG_hyper.p_Delta = IMG_hyper.p_Delta ./ (IMG_hyper.p_Sigma);
+            IMG_hyper.p_Sigma(:) = 1;
+
+            IMG_hyper.a_theta = IMG_hyper.a_theta ./ sqrt(IMG_hyper.a_Sigma);
+            IMG_hyper.a_Delta = IMG_hyper.a_Delta ./ (IMG_hyper.a_Sigma);
+            IMG_hyper.a_Sigma(:) = 1;
+
+            % 2. SuperPixel statistics
+            IMG_K = round(IMG_params.K*IMG_params.Kpercent);
+            IMG_label = random_init(IMG_xdim, IMG_ydim, IMG_w, IMG_K);
+            IMG_label(~IMG_boundary_mask) = 0;
+            IMG_max_SPs = max(IMG_K + IMG_area, IMG_K * 20);
+
+            % 3. Topology Table Look Up
+            load topology_tables;
+            IMG_T4Table = tc.T4Table;
+
+            IMG_max_UID = 1;
+
+            IMG_SP_changed = true(1, IMG_max_SPs);
+
+            IMG_new_pos = new_NormalD(2, IMG_hyper.p_theta, IMG_hyper.p_Delta, true);
+            IMG_new_app = new_NormalD(3, IMG_hyper.a_theta, IMG_hyper.a_Delta, true);
+            IMG_new_SP = new_SP(IMG_new_pos, IMG_new_app, 0, [0, 0], IMG_N, IMG_max_SPs);
+            IMG_SP_old = false(1,IMG_max_SPs);
+            IMG_log_area_var = log(IMG_area_var);
+
+            IMG_K = max(max(IMG_label));
+            for i=1:IMG_K
+                IMG_SP(i) = new_SP(IMG_new_pos, IMG_new_app, IMG_max_UID, [0, 0], IMG_N, IMG_max_SPs);
+                IMG_max_UID = IMG_max_UID+1;
+            end
+
+            %CALCULATE VALUES FOR CALCULATING MODEL ORDER
+            %calculate model order with is_old/new_const + (area - size/2)*size/area_var
+            model_order_params.is_old_const = IMG_log_beta  - 0.5 * (1.837877066409 + IMG_log_area_var + (IMG_area^2)/IMG_area_var);
+            model_order_params.is_new_const = IMG_log_alpha - 0.5 * (1.837877066409 + IMG_log_area_var + (IMG_area^2)/IMG_area_var);
+            model_order_params.area = IMG_area;
+            model_order_params.area_var = IMG_area_var;
+            
+            %POPULATE SUPERPIXELS
+            % populate the linked lists and pointers
+            for x=1:IMG_xdim
+                for y=1:IMG_ydim
+                    curLabel = IMG_label(x, y);
+                    if (curLabel>0)
+                        index = get_index_from_x_and_y(x, y, IMG_xdim);
+                        IMG_SP(curLabel) = SP_add_pixel_init(IMG_SP(curLabel), IMG_data, index, U_check_border_pix(IMG, index), IMG_boundary_mask(x, y));
+                        IMG_SP(curLabel) = SP_update_neighbors_add_self(IMG_SP(curLabel), IMG_label, index);
+                    end
+                end
+            end
+
+            for k=1:IMG_K
+                IMG_SP(k) = SP_calculate_log_probs(IMG_SP(k));
+            end
+            
             disp('done IMG_init');
         else
             % optical flow returns actual x and y flow... flip it
@@ -94,37 +201,162 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             vx = -flow.bvx;
             vy = -flow.bvy;
             save('pre_prop.mat');
-            IMG = IMG_prop(oim1,vy,vx,IMG);
+            
+            % IMAGE PROPAGATION
+            
+            % delete the SPs that are only in the boundary, i.e are occluded
+            unique_vals_image = unique(IMG_label(IMG_boundary_mask));
+            unique_vals_boundary = unique(IMG_label(~IMG_boundary_mask));
+            boundarySPs = setdiff(unique_vals_boundary, unique_vals_image);
+            IMG_label(ismember(IMG_label, boundarySPs)) = 0;
+
+
+            % Build IMG structure
+
+            % 1. image statistics
+            IMG_data = SP_img2data(oim1, IMG_w);
+            IMG_data = rescale_data(IMG_data, IMG_hyper.op_Sigma, IMG_hyper.oa_Sigma);
+
+            % DW: hard for later tracking...
+            % delete unused super pixels and change the label as well
+            labelmap = zeros(IMG_K, 1);
+            k = 1;
+            totali = 1;
+            mask = IMG_label>0;
+
+            % delete empty SPs, relabel the others to make up for it
+            while k<=IMG_K
+                if SP_is_empty(IMG, k)
+                    IMG_SP(k) = [];
+                    IMG_K = IMG_K - 1;
+                else
+                    labelmap(totali) = k;
+                    k = k + 1;
+                end
+                totali = totali + 1;
+            end
+            IMG_label(mask) = labelmap(IMG_label(mask));
+
+            % get the means of the SPs
+            IMG_prev_pos_mean = zeros(IMG_K, 2);
+            IMG_prev_app_mean = zeros(IMG_K, 3);
+            for k=1:IMG_K
+                if ~SP_is_empty(IMG, k)
+                    IMG_prev_pos_mean(k, :) = NormalD_calc_mean(IMG_SP(k).pos);
+                    IMG_prev_app_mean(k, :) = NormalD_calc_mean(IMG_SP(k).app);
+                end
+            end
+            meanx = IMG_prev_pos_mean(:, 1);
+            meany = IMG_prev_pos_mean(:, 2);
+
+            IMG_prev_label = IMG_label;
+            IMG_prev_K = IMG_K;
+
+            % get the previous precision
+            mu_p = bsxfun(@times, IMG_prev_pos_mean, sqrt(IMG_hyper.op_Sigma));
+            mu_a = bsxfun(@times, IMG_prev_app_mean, sqrt(IMG_hyper.oa_Sigma));
+            mu = [mu_p, mu_a];
+            [IMG_prev_covariance, IMG_prev_precision] = get_gp_covariance(mu, IMG_cov_var_a, IMG_cov_var_p, IMG_hyper.p_Delta(1));
+
+            vx_extended = holdpad(vx, size(IMG_label,1),size(IMG_label,2));
+            vy_extended = holdpad(vy, size(IMG_label,1),size(IMG_label,2));
+
+            IMG_prev_indices = populate_indices(IMG_prev_K, IMG_prev_label);
+
+            sp_v = zeros(2, numel(IMG_SP));
+            sp_x = zeros(1, numel(IMG_SP));
+            sp_y = zeros(1, numel(IMG_SP));
+            for k = 1:IMG_K
+                indices_k = IMG_prev_indices(k).all;
+                IMG_SP(k).app.theta = IMG_prev_app_mean(k, :);
+
+                vxi = mean(vx_extended(indices_k));
+                vyi = mean(vy_extended(indices_k));
+
+                x = round((meanx(k))*sqrt(IMG_hyper.op_Sigma(1)))+1;
+                y = round((meany(k))*sqrt(IMG_hyper.op_Sigma(2)))+1;
+                xi = max(min(x,IMG_xdim-2*IMG_w),1);
+                yi = max(min(y,IMG_ydim-2*IMG_w),1);
+
+                %2.2 Pixel statistics
+                IMG_SP(k).N = 0;
+                IMG_SP(k).pixels = false(size(IMG_SP(k).pixels));
+                IMG_SP(k).borders = false(size(IMG_SP(k).borders));
+                IMG_SP(k).neighbors = zeros(size(IMG_SP(k).neighbors));
+                IMG_SP_old(k) = true;
+
+                IMG_SP(k).pos.theta = IMG_prev_pos_mean(k, :);
+
+                if (isempty(IMG_SP(k).prev_v) || all(IMG_SP(k).prev_v==0))
+                    IMG_SP(k).prev_v(:) = [vxi, vyi] ./ sqrt(IMG_hyper.op_Sigma);
+                else
+                    IMG_SP(k).prev_v(:) = IMG_SP(k).v(:);
+                end
+
+                IMG_SP(k).v = [vx(xi,yi), vy(xi,yi)] ./ sqrt(IMG_hyper.op_Sigma);
+
+                sp_v(1,k) = vxi;
+                sp_v(2,k) = vyi;
+
+                sp_x(k) = vxi + x;
+                sp_y(k) = vyi + y;
+            end
+            meanx = meanx * sqrt(IMG_hyper.op_Sigma(1));
+            meany = meany * sqrt(IMG_hyper.op_Sigma(2));
+
+
+            sp_vx = sp_v(1,:);
+            sp_vy = sp_v(2,:);
+
+            IMG_label = SP_prop_init(IMG_K, IMG_label, meanx, meany, sp_vx, sp_vy, IMG_boundary_mask);
+            IMG_K = max(max(IMG_label));
+            
+            % populate the linked lists and pointers
+            for x=1:IMG_xdim
+                for y=1:IMG_ydim
+                    curLabel = IMG_label(x, y);
+                    if (curLabel>0)
+                        index = get_index_from_x_and_y(x, y, IMG_xdim);
+                        IMG_SP(curLabel) = SP_add_pixel_init(IMG_SP(curLabel), IMG_data, index, U_check_border_pix(IMG, index), IMG_boundary_mask(x, y));
+                        IMG_SP(curLabel) = SP_update_neighbors_add_self(IMG_SP(curLabel), IMG_label, index);
+                    end
+                end
+            end
+
+            for k=1:IMG_K
+                IMG_SP(k) = SP_calculate_log_probs(IMG_SP(k));
+            end
+
+            IMG_SP_changed(:) = true;
         end
 
         oim = oim1;
 
         E = [];
         it = 1;
-        IMG.alive_dead_changed = true;
-        IMG.SxySyy = [];
-        IMG.Sxy = [];
-        IMG.Syy = [];
+        IMG_alive_dead_changed = true;
+        IMG_Sxy = [];
+        IMG_Syy = [];
         converged = false;
         
         while (~converged && it<=5 && frame_it==1)
             fprintf('initial while loop: it=%d\n', it);
 
-            oldK = IMG.K;
-            IMG.SP_changed(:) = true;
+            oldK = IMG_K;
+            IMG_SP_changed(:) = true;
             disp('splitting');
 
             if (dispOn)
-                display_img(IMG, it, oim);
+                display_img(IMG_w, IMG_label, it, oim);
             end
             
             IMG = split_move(IMG,1);
             E(end+1) = U_calc_energy(IMG);
 
-            converged = IMG.K - oldK < 2;
+            converged = IMG_K - oldK < 2;
 
             if (dispOn)
-                display_img(IMG, it, oim);
+                display_img(IMG_w, IMG_label, it, oim);
             end
             it = it + 1;
         end
@@ -132,86 +364,87 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         converged = false;
         if (frame_it>1)
             disp('merging, splitting, switching, localonlying');
-            IMG.SP_changed(:) = true;
+            IMG_SP_changed(:) = true;
             IMG = merge_move(IMG,1);
-            IMG.SP_changed(:) = true;
+            IMG_SP_changed(:) = true;
             IMG = split_move(IMG,10);
-            IMG.SP_changed(:) = true;
+            IMG_SP_changed(:) = true;
             IMG = switch_move(IMG);
-            IMG.SP_changed(:) = true;
-            IMG = localonly_move(IMG,10);
+            IMG_SP_changed(:) = true;
+            [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, newE] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, 10);
         end
-        IMG.SP_changed(:) = true;
-        IMG.alive_dead_changed = true;
+        IMG_SP_changed(:) = true;
+        IMG_alive_dead_changed = true;
         
         it = 0;
-        old_label = IMG.label;
+        old_label = IMG_label;
         while (~converged && it<20)
-            old_SP_changed = IMG.SP_changed;
+            old_SP_changed = IMG_SP_changed;
             it = it + 1;
             fprintf('Big while loop: it=%d\n', it);
             times = zeros(1,5);
 
-            if (~params.reestimateFlow)
-                IMG.SP_changed = old_SP_changed;
+            if (~IMG_params.reestimateFlow)
+                IMG_SP_changed = old_SP_changed;
                 disp('localonly_move');
-                tic;IMG = localonly_move(IMG,150);times(2)=toc;
-                SP_changed1 = IMG.SP_changed;
+                tic;[IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, newE] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, 150);times(2)=toc;
+                SP_changed1 = IMG_SP_changed;
                 SP_changed0 = SP_changed1;
             else
                 disp('local and localonly');
-                IMG.SP_changed = old_SP_changed;
-                tic;IMG = local_move(IMG,50);times(1)=toc;
-                SP_changed0 = IMG.SP_changed;
-                IMG.SP_changed = old_SP_changed;
-                tic;IMG = localonly_move(IMG,5);times(2)=toc;
-                SP_changed1 = IMG.SP_changed;
+                IMG_SP_changed = old_SP_changed;
+                tic;[IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_Sxy, IMG_Syy, newE] = local_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_prev_pos_mean, IMG_prev_K, IMG_prev_precision, IMG_prev_covariance, IMG_Sxy, IMG_Syy, 50);times(1)=toc;
+                SP_changed0 = IMG_SP_changed;
+                IMG_SP_changed = old_SP_changed;
+                tic;[IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, newE] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, 5);times(2)=toc;
+                SP_changed1 = IMG_SP_changed;
             end
             if (frame_it>1 && it<5)
                 disp('merge, split, switch');
-                IMG.SP_changed = old_SP_changed;
+                IMG_SP_changed = old_SP_changed;
                 tic;IMG = merge_move(IMG,1);times(3)=toc;
-                SP_changed2 = IMG.SP_changed;
-                IMG.SP_changed = old_SP_changed;
+                SP_changed2 = IMG_SP_changed;
+                IMG_SP_changed = old_SP_changed;
                 tic;IMG = split_move(IMG,1);times(4)=toc;
-                SP_changed3 = IMG.SP_changed;
-                IMG.SP_changed = old_SP_changed;
+                SP_changed3 = IMG_SP_changed;
+                IMG_SP_changed = old_SP_changed;
                 tic;IMG = switch_move(IMG);times(5)=toc;
-                SP_changed4 = IMG.SP_changed;
-                IMG.SP_changed = SP_changed0 | SP_changed1 | SP_changed2 | SP_changed3 | SP_changed4;
+                SP_changed4 = IMG_SP_changed;
+                IMG_SP_changed = SP_changed0 | SP_changed1 | SP_changed2 | SP_changed3 | SP_changed4;
             else
-                IMG.SP_changed = SP_changed0 | SP_changed1;
+                IMG_SP_changed = SP_changed0 | SP_changed1;
             end
 
             E(end+1) = U_calc_energy(IMG);
-            disp(numel(IMG.SP));
-            converged = ~any(~arrayfun(@(x)(isempty(x{1})), {IMG.SP(:).N}) & IMG.SP_changed(1:IMG.K));
+            disp(numel(IMG_SP));
+            converged = ~any(~arrayfun(@(x)(isempty(x{1})), {IMG_SP(:).N}) & IMG_SP_changed(1:IMG_K));
 
             if (dispOn)
-                display_img(IMG, it, oim);
+                display_img(IMG_w, IMG_label, it, oim);
             end
         end
 
-        SP_UID = {IMG.SP(:).UID};
-        mask = arrayfun(@(x)(isempty(x{1})), SP_UID);
-        for m = find(mask)
-            SP_UID{m} = -1;
+        SP_UID = {IMG_SP(:).UID};
+        found_mask = find(arrayfun(@(x)(isempty(x{1})), SP_UID));
+        
+        for m = 1:length(found_mask)
+            SP_UID{found_mask(m)} = -1;
         end
-        sp_labels(:,:,frame_it) = reshape([SP_UID{IMG.label(IMG.w+1:end-IMG.w,IMG.w+1:end-IMG.w)}], size(oim,1), size(oim,2));
+        sp_labels(:,:,frame_it) = reshape([SP_UID{IMG_label(IMG_w+1:end-IMG_w,IMG_w+1:end-IMG_w)}], size(oim,1), size(oim,2));
     end
 end
 
-function display_img(IMG, it, oim)
+function display_img(IMG_w, IMG_label, it, oim)
     sfigure(1);
     subplot(1,1,1);
-    imagesc(IMG.label);
-    title([num2str(it) ' - ' num2str(numel(unique(IMG.label))-1)]);
+    imagesc(IMG_label);
+    title([num2str(it) ' - ' num2str(numel(unique(IMG_label))-1)]);
 
     sfigure(2);
     subplot(1,1,1);
-    im = zeros(size(oim,1)+2*IMG.w, size(oim,2)+2*IMG.w, 3);
-    im(IMG.w+1:end-IMG.w, IMG.w+1:end-IMG.w, :) = double(oim)/255;
-    borders = is_border_vals(IMG.label);
+    im = zeros(size(oim,1)+2*IMG_w, size(oim,2)+2*IMG_w, 3);
+    im(IMG_w+1:end-IMG_w, IMG_w+1:end-IMG_w, :) = double(oim)/255;
+    borders = is_border_vals(IMG_label);
     im = setPixelColors(im, find(borders), [1 0 0]);
     image(im,'parent',gca);
     drawnow;

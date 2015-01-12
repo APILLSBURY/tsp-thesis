@@ -12,11 +12,12 @@
 % == Converted to MATLAB by Andrew Pillsbury 12-4-2014
 % =============================================================================
 
-function IMG = localonly_move(IMG, its)
+function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, newE] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, its)
     for i=1:its
         fprintf('its=%d\n', i);
-        IMG = local_move_internal(IMG);
-        if ~IMG.changed
+        [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, changed] = local_move_internal(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed);
+        newE = U_calc_energy(IMG_N, IMG_SP, IMG_SP_old, model_order_params);
+        if ~changed
             break;
         end
     end
