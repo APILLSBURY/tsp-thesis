@@ -47,25 +47,34 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
             temp_Syy = IMG_prev_precision;
             temp_d = zeros(IMG_prev_K, 1);
             if num_dead>0
-                for dead_k=dead2all(1:num_dead)
+                for dead_kindex=1:num_dead
+                    dead_k = dead2all(dead_kindex);
                     c = temp_Syy(dead_k, dead_k);
                     temp_still_alive(dead_k) = false;
 
                     %only populate half of the matrix
-                    for i=find(temp_still_alive(1:dead_k))'
+                    found_still_alive = find(temp_still_alive(1:dead_k));
+                    for ind=1:length(found_still_alive);
+                        i = found_still_alive(ind);
                         temp_d(i, 1) = temp_Syy(dead_k, i);
                     end
 
-                    for i=find(temp_still_alive(dead_k+1:IMG_prev_K))'
+                    found_still_alive = find(temp_still_alive(dead_k+1:IMG_prev_K));
+                    for ind=1:length(found_still_alive);
+                        i = found_still_alive(ind);
                         temp_d(i, 1) = temp_Syy(i, dead_k);
                     end
 
-                    for i=find(temp_still_alive)'
+                    found_still_alive = find(temp_still_alive);
+                    for ind=1:length(found_still_alive);
+                        i = found_still_alive(ind);
                         temp_di = temp_d(i, 1);
                         temp_Syy(i, i) = temp_Syy(i, i) - (temp_di^2)/c;
                         temp_di = temp_di/c;
-                        for j=find(temp_still_alive(i+1:IMG_prev_K))'
-                           temp_Syy(j, i) = temp_Syy(j, i) - temp_di*temp_d(j);
+                        temp_found_still_alive = find(temp_still_alive(i+1:IMG_prev_K));
+                        for jind=1:length(temp_found_still_alive)
+                            j = temp_found_still_alive(jind);
+                            temp_Syy(j, i) = temp_Syy(j, i) - temp_di*temp_d(j);
                         end
                     end
                 end

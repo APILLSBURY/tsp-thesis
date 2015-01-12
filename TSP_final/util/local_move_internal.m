@@ -21,7 +21,8 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
     have_not_checked = true(IMG_N, 1);
     
     % MM STEP
-    for for_k=perm
+    for for_kindex=1:length(perm)
+        for_k = perm(for_kindex);
         % find a nonempty super pixel
         if ~(for_k > numel(IMG_SP) || isempty(IMG_SP(for_k).N) || IMG_SP(for_k).N == 0) && IMG_SP_changed(for_k)
             IMG_SP_changed(for_k) = false;
