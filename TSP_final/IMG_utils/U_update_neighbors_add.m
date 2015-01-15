@@ -7,7 +7,7 @@
 % --   parameters:
 % --     - index : the index bordering the removed pixel
 % --------------------------------------------------------------------------
-function IMG_SP = U_update_neighbors_add(IMG_SP, IMG_label, index)
+function IMG_SP = U_update_neighbors_add(IMG_label, IMG_SP, index)
     [xdim, ydim] = size(IMG_label);
     [x, y] = get_x_and_y_from_index(index, xdim);
     cur_label = IMG_label(x, y);

@@ -12,7 +12,7 @@
 % == Converted to MATLAB by Andrew Pillsbury 12-12-2014
 % =============================================================================
 
-function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, newE] = switch_move(IMG_label, IMG_SP, IMG_K, IMG_N, IMG_SP_old, IMG_SP_changed, IMG_max_UID, IMG_max_SPs, IMG_alive_dead_changed, IMG_new_SP, model_order_params, IMG_new_pos, IMG_new_app)
+function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = switch_move(IMG_label, IMG_SP, IMG_K, IMG_N, IMG_SP_old, IMG_SP_changed, IMG_max_UID, IMG_max_SPs, IMG_alive_dead_changed, IMG_new_SP, model_order_params, IMG_new_pos, IMG_new_app)
     xdim = size(IMG_label, 1);
     empty_SPs = false(IMG_K, 1);
     for k=1:IMG_K
@@ -93,7 +93,6 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
             end
         end
     end
-    newE = U_calc_energy(IMG_N, IMG_SP, IMG_SP_old, model_order_params);
 end
 
 

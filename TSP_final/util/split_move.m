@@ -13,35 +13,48 @@
 % =============================================================================
 
 
-function IMG = split_move(IMG, its)
+function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, its)
     for i=1:its
         % choose a random order of super pixels
-        Nsp = numel(IMG.SP);
+        Nsp = numel(IMG_SP);
         perm = randperm(Nsp);
 
         pre_K = Nsp;
-        %split_thres = floor(IMG.N/IMG.K);
+        %split_thres = floor(IMG_N/IMG_K);
 
         energies = zeros(Nsp, 1);
         mean_area = 0;
 
         for k=1:pre_K
-            temp_energy = (IMG.SP(k).log_likelihood + U_calc_model_order(IMG, IMG.SP(k).N, IMG.SP_old(k))) / IMG.SP(k).N;
+            size = IMG_SP(k).N;
+            if size==0
+                model_order = 0;
+            else
+                size_var = (model_order_params.area - size/2)*size/model_order_params.area_var;
+                if IMG_SP_old(k)
+                    model_order = model_order_params.is_old_const + size_var;
+                else
+                    model_order = model_order_params.is_new_const + size_var;
+                end
+            end
+            
+            temp_energy = (IMG_SP(k).log_likelihood + model_order) / IMG_SP(k).N;
             energies(k) = temp_energy;
-            mean_area = mean_area + IMG.SP(k).N;
+            mean_area = mean_area + IMG_SP(k).N;
         end
         mean_area = mean_area / pre_K;
         threshold = min(energies) + (max(energies)-min(energies))*0.2;
 
-        for k=perm
-            if (any(IMG.SP(k).neighbors) && (IMG.SP(k).N>mean_area || energies(k) < threshold) && IMG.SP_changed(k))
-                IMG = move_split_SP(IMG, k);
+        for kindex=1:length(perm)
+            k = perm(kindex);
+            if (any(IMG_SP(k).neighbors) && (IMG_SP(k).N>mean_area || energies(k) < threshold) && IMG_SP_changed(k))
+                [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, k);
                 
                 %REMOVE EXCESS SPs
-                SP = numel(IMG.SP); 
-                while SP_is_empty(IMG, SP) && SP>Nsp
-                    IMG.SP(SP) = [];
-                    SP = SP - 1;
+                curr_SP = numel(IMG_SP); 
+                while (curr_SP > numel(IMG_SP) || isempty(IMG_SP(curr_SP).N) || IMG_SP(curr_SP).N == 0) && curr_SP>Nsp
+                    IMG_SP(curr_SP) = [];
+                    curr_SP = curr_SP - 1;
                 end
             end
         end
@@ -49,75 +62,70 @@ function IMG = split_move(IMG, its)
 end
 
 
-function IMG = move_split_SP(IMG, index)
+function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, index)
     num_SP = 2;
-    if ~SP_is_empty(IMG, index) && IMG.SP(index).N > num_SP
+    if ~(index > numel(IMG_SP) || isempty(IMG_SP(index).N) || IMG_SP(index).N == 0) && IMG_SP(index).N > num_SP
         new_ks = ones(num_SP, 1) * -1;
         ksplit = -1;
         max_E = -inf;
 
         %only work for num_SP == 2, so far
-        IMG = move_split_SP_propose(IMG, index, num_SP, max_E, ksplit, new_ks);
-        max_E = IMG.max_E;
-        ksplit = IMG.ksplit;
-        new_ks = IMG.new_ks;
-
+        [IMG_label, max_E, ksplit, new_ks] = move_split_SP_propose(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, index, num_SP, max_E, ksplit, new_ks);
+        
         % update
         if max_E>0
             %mexPrintf("split: %f,%d,%d\n",max_E,index,new_ks[0]);
             % update the labels first
-            IMG = U_set_label_from_SP_pixels(IMG, IMG.SP(new_ks(1)), index);
+            IMG_label = U_set_label_from_SP_pixels(IMG_label, IMG_SP(new_ks(1)), index);
 
             % merge the super pixels
-            IMG = U_merge_SPs(IMG, index, new_ks(1)); %need to delete
-            IMG.SP_changed(index) = true;
+            IMG_SP = U_merge_SPs(IMG_SP, IMG_label, index, new_ks(1)); %need to delete
+            IMG_SP_changed(index) = true;
             
             if (ksplit<0)
                 % splitting into a new super pixel
-                IMG.SP_changed(new_ks(2)) = true;
+                IMG_SP_changed(new_ks(2)) = true;
                 % move it to the right spot
-                if (new_ks(2)~=IMG.K+1)
-                    IMG = U_set_label_from_SP_pixels(IMG, IMG.SP(new_ks(2)), IMG.K+1);
-                    IMG = U_merge_SPs(IMG, IMG.K+1, new_ks(2));
-                    IMG.SP_old(IMG.K+1) = IMG.SP_old(new_ks(2));
+                if (new_ks(2)~=IMG_K+1)
+                    IMG_label = U_set_label_from_SP_pixels(IMG_label, IMG_SP(new_ks(2)), IMG_K+1);
+                    IMG_SP = U_merge_SPs(IMG_SP, IMG_label, IMG_K+1, new_ks(2));
+                    IMG_SP_old(IMG_K+1) = IMG_SP_old(new_ks(2));
                 end
-                IMG.K = IMG.K + 1;
-                IMG.max_UID = IMG.max_UID + 1;
+                IMG_K = IMG_K + 1;
+                IMG_max_UID = IMG_max_UID + 1;
             else
                 % splitting into an old super pixel
-                IMG.SP_changed(ksplit) = true;
-                IMG = U_set_label_from_SP_pixels(IMG, IMG.SP(new_ks(2)), ksplit);
-                IMG = U_merge_SPs(IMG, ksplit, new_ks(2));
-                IMG.alive_dead_changed = true;
+                IMG_SP_changed(ksplit) = true;
+                IMG_label = U_set_label_from_SP_pixels(IMG_label, IMG_SP(new_ks(2)), ksplit);
+                IMG_SP = U_merge_SPs(IMG_SP, IMG_label, ksplit, new_ks(2));
+                IMG_alive_dead_changed = true;
             end
         elseif (ksplit~=-2)
-            %Recover previous IMG.label
-            IMG = U_set_label_from_SP_pixels(IMG, IMG.SP(IMG.K+1), index);
-            IMG = U_set_label_from_SP_pixels(IMG, IMG.SP(IMG.K+2), index);
-            IMG.SP_changed(index) = false;
+            %Recover previous IMG_label
+            IMG_label = U_set_label_from_SP_pixels(IMG_label, IMG_SP(IMG_K+1), index);
+            IMG_label = U_set_label_from_SP_pixels(IMG_label, IMG_SP(IMG_K+2), index);
+            IMG_SP_changed(index) = false;
 
             for i=1:num_SP
-                IMG = U_merge_SPs(IMG, index, IMG.K+i);
+                IMG_SP = U_merge_SPs(IMG_SP, IMG_label, index, IMG_K+i);
             end
         else
-            IMG.SP_changed(index) = false;
+            IMG_SP_changed(index) = false;
         end
     end
 end
 
 
-function IMG = move_split_SP_propose(IMG, index, num_SP, max_E, ksplit, new_ks)
+function [IMG_label, max_E, ksplit, new_ks] = move_split_SP_propose(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, index, num_SP, max_E, ksplit, new_ks)
     num_iter = 5;
-    SP_bbox = [IMG.xdim, 1, IMG.ydim, 1];
+    SP_bbox = [xdim, 1, ydim, 1];
 
     % 1. Kmeans++
-    IMG = U_Kmeans_plusplus(IMG, index, SP_bbox, num_SP, num_iter);
-    SP_bbox = IMG.bbox;
+    [IMG_label, SP_bbox, broken] = U_Kmeans_plusplus(IMG_label, IMG_SP, IMG_data, index, SP_bbox, num_SP, num_iter);
     
-    if (IMG.broken)
-        IMG.max_E = -inf;
-        IMG.ksplit = -2;
-        IMG.new_ks = new_ks;
+    if broken
+        max_E = -inf;
+        ksplit = -2;
         return;
     end
 
@@ -126,39 +134,39 @@ function IMG = move_split_SP_propose(IMG, index, num_SP, max_E, ksplit, new_ks)
     % we will mess around label matrix for new proposal
     % and recover it from SP.pixels if it doesn't work out
     % merge small connected component in the label matrix
-    IMG = U_connect_newSP(IMG, index, SP_bbox, num_SP);
+    [IMG_label, IMG_SP] = U_connect_newSP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, index, SP_bbox, num_SP);
 
     % new super pixels in K+1 and K+2... old super pixel in index
-    IMG.SP(index) = SP_empty(IMG.SP(index));
+    IMG_SP(index) = SP_empty(IMG_SP(index));
 
 %    if (option==-1)
     % (index, new);
-    E = move_split_calc_delta(IMG, IMG.SP(index), create_SP_new(IMG), IMG.SP(IMG.K+1), IMG.SP(IMG.K+2), IMG.SP_old(index), false);
+    E = move_split_calc_delta(model_order_params, IMG_SP(index), create_SP_new(IMG), IMG_SP(IMG_K+1), IMG_SP(IMG_K+2));
     if (E>max_E)
         max_E = E;
-        new_ks(1) = IMG.K+1;
-        new_ks(2) = IMG.K+2;
+        new_ks(1) = IMG_K+1;
+        new_ks(2) = IMG_K+2;
         ksplit = -1;
     end
     % (new, index)
-    E = move_split_calc_delta(IMG, IMG.SP(index), create_SP_new(IMG), IMG.SP(IMG.K+2), IMG.SP(IMG.K+1), false, IMG.SP_old(index));
+    E = move_split_calc_delta(model_order_params, IMG_SP(index), create_SP_new(IMG), IMG_SP(IMG_K+2), IMG_SP(IMG_K+1));
     if (E>max_E)
         max_E = E;
-        new_ks(1) = IMG.K+2;
-        new_ks(2) = IMG.K+1;
+        new_ks(1) = IMG_K+2;
+        new_ks(2) = IMG_K+1;
         ksplit = -1;
     end
     % (index, old_empty) && (old_empty, index)
-    for ktest=1:IMG.K
-        if (ktest~=index && ktest<=numel(IMG.SP) && IMG.SP(ktest).N==0)
-            E = move_split_calc_delta(IMG, IMG.SP(index), IMG.SP(ktest), IMG.SP(IMG.K+1), IMG.SP(IMG.K+2), IMG.SP_old(index), false);
+    for ktest=1:IMG_K
+        if (ktest~=index && ktest<=numel(IMG_SP) && IMG_SP(ktest).N==0)
+            E = move_split_calc_delta(model_order_params, IMG_SP(index), IMG_SP(ktest), IMG_SP(IMG_K+1), IMG_SP(IMG_K+2));
             if (E>max_E)
                 max_E = E;
-                new_ks(1) = IMG.K+1;
-                new_ks(2) = IMG.K+2;
+                new_ks(1) = IMG_K+1;
+                new_ks(2) = IMG_K+2;
                 ksplit = ktest;
             end
-            E = move_split_calc_delta(IMG, IMG.SP(index), IMG.SP(ktest), IMG.SP(IMG.K+2), IMG.SP(IMG.K+1), false, IMG.SP_old(index));
+            E = move_split_calc_delta(model_order_params, IMG_SP(index), IMG_SP(ktest), IMG_SP(IMG_K+2), IMG_SP(IMG_K+1));
             if (E>max_E)
                 max_E = E;
                 new_ks(1) = K+2;
@@ -167,21 +175,18 @@ function IMG = move_split_SP_propose(IMG, index, num_SP, max_E, ksplit, new_ks)
             end
         end
     end
-    IMG.max_E = max_E;
-    IMG.ksplit = ksplit;
-    IMG.new_ks = new_ks;
 %     else
 %         % for refine_move
-%         % split into IMG.SP(index] and IMG.SP(option]
-%         if (~IMG.SP_old(index) && ~IMG.SP_old(option))
-%             SP1_total_pos = IMG.SP(IMG.K-1).pos.total;
-%             N1 = IMG.SP(IMG.K-1).N;
-%             SP2_total_pos = IMG.SP(IMG.K).pos.total;
-%             N2 = IMG.SP(IMG.K).N;
-%             SPK1_total_pos = IMG.SP(IMG.K+1).pos.total;
-%             NK1 = IMG.SP(IMG.K+1).N;
-%             SPK2_total_pos = IMG.SP(IMG.K+2).pos.total;
-%             NK2 = IMG.SP(IMG.K+2).N;
+%         % split into IMG_SP(index] and IMG_SP(option]
+%         if (~IMG_SP_old(index) && ~IMG_SP_old(option))
+%             SP1_total_pos = IMG_SP(IMG_K-1).pos.total;
+%             N1 = IMG_SP(IMG_K-1).N;
+%             SP2_total_pos = IMG_SP(IMG_K).pos.total;
+%             N2 = IMG_SP(IMG_K).N;
+%             SPK1_total_pos = IMG_SP(IMG_K+1).pos.total;
+%             NK1 = IMG_SP(IMG_K+1).N;
+%             SPK2_total_pos = IMG_SP(IMG_K+2).pos.total;
+%             NK2 = IMG_SP(IMG_K+2).N;
 % 
 %             E_1_K1 = 0;
 %             E_1_K2 = 0;
@@ -198,25 +203,25 @@ function IMG = move_split_SP_propose(IMG, index, num_SP, max_E, ksplit, new_ks)
 %             end
 % 
 %             if (E_1_K1 < E_1_K2)
-%                 new_ks(1) = IMG.K+1;
-%                 new_ks(2) = IMG.K+2;
-%                 max_E = move_split_calc_delta(IMG, IMG.SP(index), IMG.SP(option), IMG.SP(IMG.K+1), IMG.SP(IMG.K+2), IMG.SP_old(index), IMG.SP_old(option));
+%                 new_ks(1) = IMG_K+1;
+%                 new_ks(2) = IMG_K+2;
+%                 max_E = move_split_calc_delta(IMG, IMG_SP(index), IMG_SP(option), IMG_SP(IMG_K+1), IMG_SP(IMG_K+2), IMG_SP_old(index), IMG_SP_old(option));
 %             else
-%                 new_ks(1) = IMG.K+2;
-%                 new_ks(2) = IMG.K+1;
-%                 max_E = move_split_calc_delta(IMG, IMG.SP(index), IMG.SP(option), IMG.SP(IMG.K+2), IMG.SP(IMG.K+1), IMG.SP_old(index), IMG.SP_old(option));
+%                 new_ks(1) = IMG_K+2;
+%                 new_ks(2) = IMG_K+1;
+%                 max_E = move_split_calc_delta(IMG, IMG_SP(index), IMG_SP(option), IMG_SP(IMG_K+2), IMG_SP(IMG_K+1), IMG_SP_old(index), IMG_SP_old(option));
 %             end
 %         else
-%             E_1_K1 = move_split_calc_delta(IMG, IMG.SP(index), IMG.SP(option), IMG.SP(IMG.K+1), IMG.SP(IMG.K+2), IMG.SP_old(index), IMG.SP_old(option));
-%             E_1_K2 = move_split_calc_delta(IMG, IMG.SP(index), IMG.SP(option), IMG.SP(IMG.K+2), IMG.SP(IMG.K+1), IMG.SP_old(index), IMG.SP_old(option));
+%             E_1_K1 = move_split_calc_delta(IMG, IMG_SP(index), IMG_SP(option), IMG_SP(IMG_K+1), IMG_SP(IMG_K+2), IMG_SP_old(index), IMG_SP_old(option));
+%             E_1_K2 = move_split_calc_delta(IMG, IMG_SP(index), IMG_SP(option), IMG_SP(IMG_K+2), IMG_SP(IMG_K+1), IMG_SP_old(index), IMG_SP_old(option));
 % 
 %             if (E_1_K1 > E_1_K2)
-%                 new_ks(1) = IMG.K+1;
-%                 new_ks(2) = IMG.K+2;
+%                 new_ks(1) = IMG_K+1;
+%                 new_ks(2) = IMG_K+2;
 %                 max_E = E_1_K1;
 %             else
-%                 new_ks(1) = IMG.K+2;
-%                 new_ks(2) = IMG.K+1;
+%                 new_ks(1) = IMG_K+2;
+%                 new_ks(2) = IMG_K+1;
 %                 max_E = E_1_K2;
 %             end
 %        end
@@ -229,111 +234,113 @@ function dist = U_dist(vec1, vec2)
 end
 
 
-function IMG = U_Kmeans_plusplus(IMG, index, bbox, num_SP, numiter)
-    IMG.broken = false;
-    true_pix = find(IMG.SP(index).pixels)';
-
+function [IMG_label, bbox, broken] = U_Kmeans_plusplus(IMG_label, IMG_SP, IMG_data, index, bbox, num_SP, numiter)
     if (num_SP~=2)
         disp('Trying to split into more than 2');
     end
+    
+    broken = false;
+    curr_SP = IMG_SP(index);
+    true_pix = find(curr_SP.pixels)';
+    xdim = size(IMG_label, 1);
 
-    num_pix = IMG.SP(index).N;
-    distvec = zeros(length(IMG.SP(index).pixels),1);
+    num_pix = curr_SP.N;
+    distvec = zeros(length(curr_SP.pixels),1);
     klabels = zeros(num_pix,1);
     center = zeros(num_SP, 5);
 
     %1. kmeans ++ initialization
     %first cener pt
 
-    for tmp_pos=true_pix
-        % get the Bounding Box of IMG.SP(index)
-        [x, y] = get_x_and_y_from_index(tmp_pos, IMG.xdim);
+    for tmp_pos_index=1:length(true_pix)
+        tmp_pos = true_pix(tmp_pos_index);
+        % get the Bounding Box of curr_SP
+        [x, y] = get_x_and_y_from_index(tmp_pos, xdim);
         bbox(1) = min(x, bbox(1));
         bbox(2) = max(x, bbox(2));
         bbox(3) = min(y, bbox(3));
         bbox(4) = max(y, bbox(4));
     end
-    IMG.bbox = bbox;
 
-    old_split1 = IMG.SP_old(index);
+    old_split1 = IMG_SP_old(index);
     if ~old_split1 % new
         % first is new
-        seed = randi(length(IMG.SP(index).pixels));
-        while ~IMG.SP(index).pixels(seed)
-            seed = randi(length(IMG.SP(index).pixels));
-        end
+        seed = true_pix(randi(length(true_pix)));
 
-        [x, y] = get_x_and_y_from_index(seed, IMG.xdim);
-        if (IMG.label(x, y)~=index)
+        [x, y] = get_x_and_y_from_index(seed, xdim);
+        if (IMG_label(x, y)~=index)
             disp('inconsistency about cluster label');
         end
 
-        center(1,:) = IMG.data(seed,:);
+        center(1,:) = IMG_data(seed,:);
         
-        for pix=true_pix
-            distvec(pix) = U_dist(IMG.data(pix,:), center(1,:));
+        for pix_index=1:length(true_pix)
+            pix = true_pix(pix_index);
+            distvec(pix) = U_dist(IMG_data(pix,:), center(1,:));
         end
 
         % second is new
-        %seed2 = randi(length(IMG.SP(index).pixels));
-        %while ~IMG.SP(index).pixels(seed) || seed2 == seed
-        %    seed2 = randi(length(IMG.SP(index).pixels));
+        %seed2 = randi(length(curr_SP.pixels));
+        %while ~curr_SP.pixels(seed) || seed2 == seed
+        %    seed2 = randi(length(curr_SP.pixels));
         %end
 
         [~, seed2] = max(distvec);
-        [x, y] = get_x_and_y_from_index(seed2, IMG.xdim);
-        if (IMG.label(x, y)~=index)
+        [x, y] = get_x_and_y_from_index(seed2, xdim);
+        if (IMG_label(x, y)~=index)
             disp('inconsistency about cluster label');
         end
-        center(2,:) = IMG.data(seed2,:);
+        center(2,:) = IMG_data(seed2,:);
 
     else %old
-        center(1,1:2) = NormalD_calc_mean(IMG.SP(index).pos);
-        center(1,3:5) = NormalD_calc_mean(IMG.SP(index).app);
+        center(1,1:2) = NormalD_calc_mean(curr_SP.pos);
+        center(1,3:5) = NormalD_calc_mean(curr_SP.app);
 
-        for pix=true_pix
-            distvec(pix) = U_dist(IMG.data(pix,:), center(1,:));
+        for pix_index=1:length(true_pix)
+            pix = true_pix(pix_index);
+            distvec(pix) = U_dist(IMG_data(pix,:), center(1,:));
         end
 
         % second is new
         [~, seed2] = max(distvec);
-        [x, y] = get_x_and_y_from_index(seed2, IMG.xdim);
-        if (IMG.label(x, y)~=index)
+        [x, y] = get_x_and_y_from_index(seed2, xdim);
+        if (IMG_label(x, y)~=index)
             disp('inconsistency about cluster label');
         end
-        center(2,:) = IMG.data(seed2,:);
+        center(2,:) = IMG_data(seed2,:);
 
 %     elseif (~old_split1 && old_split2) % new old
-%         center(2,1:2) = IMG.SP(index2).pos.mean;
-%         center(2,3:5) = IMG.SP(index2).app.mean;
+%         center(2,1:2) = IMG_SP(index2).pos.mean;
+%         center(2,3:5) = IMG_SP(index2).app.mean;
 % 
 %         for pix=true_pix
-%             distvec(pix) = U_dist(IMG.data(pix,:), center(2,:));
+%             distvec(pix) = U_dist(IMG_data(pix,:), center(2,:));
 %         end
 % 
 %         % first is new
 %         [~, seed] = max(distvec);
-%         [x, y] = get_x_and_y_from_index(seed, IMG.xdim);
-%         if (IMG.label(x, y)~=index)
+%         [x, y] = get_x_and_y_from_index(seed, xdim);
+%         if (IMG_label(x, y)~=index)
 %             disp('inconsistency about cluster label');
 %         end
-%         center(1,:) = IMG.data(seed,:);
+%         center(1,:) = IMG_data(seed,:);
 % 
 %     else % old old
-%         center(1,1:2) = IMG.SP(index).pos.mean;
-%         center(1,3:5) = IMG.SP(index).app.mean;
+%         center(1,1:2) = curr_SP.pos.mean;
+%         center(1,3:5) = curr_SP.app.mean;
 % 
-%         center(2,1:2) = IMG.SP(index2).pos.mean;
-%         center(2,3:5) = IMG.SP(index2).app.mean;
+%         center(2,1:2) = IMG_SP(index2).pos.mean;
+%         center(2,3:5) = IMG_SP(index2).app.mean;
      end
 
     %2. kmeans ++ iterations
     change = false;
     for itr=1:numiter
-        distvec = inf(length(IMG.SP(index).pixels),1);
-        for pix=true_pix
+        distvec = inf(length(curr_SP.pixels),1);
+        for pix_index=1:length(true_pix)
+            pix = true_pix(pix_index);
             for i=1:num_SP
-                tmp_dist = U_dist(IMG.data(pix,:), center(i,:));
+                tmp_dist = U_dist(IMG_data(pix,:), center(i,:));
                 if(tmp_dist < distvec(pix) )
                     distvec(pix) = tmp_dist;
                     klabels(pix) = i;
@@ -351,13 +358,14 @@ function IMG = U_Kmeans_plusplus(IMG, index, bbox, num_SP, numiter)
         SP_sz = zeros(num_SP, 1);
 
 
-        for pix=true_pix
-            %printf("dist %d,%d,%d,%d\n",r,c,counter,klabels[counter]);
+        for pix_index=1:length(true_pix)
+            pix = true_pix(pix_index);
+
             % klabels[n]==0 && old_split1 then don't update
             % klabels[n]==1 && old_split2 then don't update
             % if (klabels[n]!=old_split1-1 && klabels[n]!=old_split2-1)
             if (klabels(pix)~=1 || ~old_split1)
-                center(klabels(pix), :) = center(klabels(pix), :) + IMG.data(pix, :);
+                center(klabels(pix), :) = center(klabels(pix), :) + IMG_data(pix, :);
             end
             SP_sz(klabels(pix)) = SP_sz(klabels(pix))+1;
         end
@@ -369,7 +377,7 @@ function IMG = U_Kmeans_plusplus(IMG, index, bbox, num_SP, numiter)
                 end
             else
                 if old_split1
-                    IMG.broken = true;
+                    broken = true;
                 else
                     disp('one cluster removed... shouldnt happen');
                 end
@@ -377,11 +385,12 @@ function IMG = U_Kmeans_plusplus(IMG, index, bbox, num_SP, numiter)
         end
     end
 
-    if ~IMG.broken
+    if ~broken
         % change label accordingly
-        for pix=true_pix
-            [x, y] = get_x_and_y_from_index(pix, IMG.xdim);
-            IMG.label(x, y) = IMG.K+klabels(pix);
+        for pix_index=1:length(true_pix)
+            pix = true_pix(pix_index);
+            [x, y] = get_x_and_y_from_index(pix, xdim);
+            IMG_label(x, y) = IMG_K+klabels(pix);
         end
     end
 end
@@ -389,7 +398,7 @@ end
 
 % KMerge Version 2: grow region
 
-function IMG = U_connect_newSP(IMG, old_k, bbox, num_SP)
+function [IMG_label, IMG_SP] = U_connect_newSP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, old_k, bbox, num_SP)
     min_x = bbox(1);
     min_y = bbox(3);
     max_x = bbox(2);
@@ -397,48 +406,49 @@ function IMG = U_connect_newSP(IMG, old_k, bbox, num_SP)
     dx4 = [-1,  0,  1,  0];
     dy4 = [ 0, -1,  0,  1];
 
-    new_label = false(IMG.xdim, IMG.ydim);
+    [xdim, ydim] = size(IMG_label);
+    new_label = false(xdim, ydim);
     label_count = 0;
 
-    check_labels = (1:num_SP) + IMG.K;
+    check_labels = (1:num_SP) + IMG_K;
 
     for x=min_x:max_x
         for y=min_y:max_y
-            tmp_ind = get_index_from_x_and_y(x, y, IMG.xdim);
-            curLabel = IMG.label(x, y);
+            tmp_ind = get_index_from_x_and_y(x, y, xdim);
+            curLabel = IMG_label(x, y);
             if any(curLabel==check_labels) && ~new_label(x, y)
                 label_count = label_count + 1;
-
+                k = IMG_K + label_count;
                 new_label(x, y) = true;
                 
-                if ~SP_is_empty(IMG, IMG.K+label_count)
+                if ~(k > numel(IMG_SP) || isempty(IMG_SP(k).N) || IMG_SP(k).N == 0)
                     disp('SP should be null..');
                 end
-                IMG.SP(IMG.K+label_count) = new_SP(IMG.new_pos, IMG.new_app, IMG.max_UID, [0, 0], IMG.N, IMG.max_SPs);
+                IMG_SP(k) = new_SP(IMG_new_pos, IMG_new_app, IMG_max_UID, [0, 0], IMG_N, IMG_max_SPs);
                 
                 %can't decide whether it will be border yet
-                pixel_bfs=zeros(size(IMG.SP(IMG.K+label_count).pixels));
+                pixel_bfs=zeros(size(IMG_SP(k).pixels));
                 pixel_bfs_write=1;
                 pixel_bfs_read=1;
                 
-                IMG.SP(IMG.K+label_count) = SP_add_pixel(IMG.SP(IMG.K+label_count), IMG.data, tmp_ind, false, IMG.boundary_mask(x, y));
+                IMG_SP(k) = SP_add_pixel(IMG_SP(k), IMG_data, tmp_ind, false, IMG_boundary_mask(x, y));
                 pixel_bfs(pixel_bfs_write) = tmp_ind;
                 pixel_bfs_write = pixel_bfs_write+1;
                 
                 while(pixel_bfs_read < pixel_bfs_write)
                     pix = pixel_bfs(pixel_bfs_read);
-                    [pix_x, pix_y] = get_x_and_y_from_index(pix, IMG.xdim);
+                    [pix_x, pix_y] = get_x_and_y_from_index(pix, xdim);
                     for n=1:4
                         new_x = pix_x+dx4(n);
                         new_y = pix_y+dy4(n);
                         if (new_x >= min_x && new_x <= max_x) && (new_y >= min_y && new_y <= max_y)
-                            new_ind = get_index_from_x_and_y(new_x, new_y, IMG.xdim);
-                            if ~new_label(new_x, new_y) && IMG.label(new_x, new_y) == curLabel
+                            new_ind = get_index_from_x_and_y(new_x, new_y, xdim);
+                            if ~new_label(new_x, new_y) && IMG_label(new_x, new_y) == curLabel
                                 % should always update labels before adding pixel, otherwise
                                 % U_check_border_pix will be wrong!
                                 new_label(new_x, new_y) = true;
-                                IMG.label(new_x, new_y) = IMG.K+label_count;
-                                IMG.SP(IMG.K + label_count) = SP_add_pixel(IMG.SP(IMG.K + label_count), IMG.data, new_ind, false, IMG.boundary_mask(new_x, new_y));
+                                IMG_label(new_x, new_y) = k;
+                                IMG_SP(k) = SP_add_pixel(IMG_SP(k), IMG_data, new_ind, false, IMG_boundary_mask(new_x, new_y));
                                 pixel_bfs(pixel_bfs_write) = new_ind;
                                 pixel_bfs_write = pixel_bfs_write+1;
                             end
@@ -446,7 +456,7 @@ function IMG = U_connect_newSP(IMG, old_k, bbox, num_SP)
                     end
                     pixel_bfs_read = pixel_bfs_read+1;
                 end
-                IMG.label(x, y) = IMG.K+label_count;
+                IMG_label(x, y) = k;
             end
         end
     end
@@ -454,29 +464,29 @@ function IMG = U_connect_newSP(IMG, old_k, bbox, num_SP)
     % Now is the time to clean up the border pixels and neighbor ids
     
     % remove all neighbors of the original index
-    for k=1:IMG.K
-        IMG.SP(k).neighbors(old_k) = 0;
+    for k=1:IMG_K
+        IMG_SP(k).neighbors(old_k) = 0;
     end
     
     
     % loop through every pixel in the bounding box plus one pixel all around
     % set border and neighbor values
-    for x=max(1, min_x-1):min(IMG.xdim, max_x+1)
-        for y=max(1, min_y-1):min(IMG.ydim, max_y+1)
-            k = IMG.label(x, y);
+    for x=max(1, min_x-1):min(xdim, max_x+1)
+        for y=max(1, min_y-1):min(ydim, max_y+1)
+            k = IMG_label(x, y);
             if k>0
-                index = get_index_from_x_and_y(x, y, IMG.xdim);
-                is_border = U_check_border_pix(IMG, index, k);
-                IMG.SP(k).borders(index) = is_border;
+                index = get_index_from_x_and_y(x, y, xdim);
+                is_border = U_check_border_pix(IMG_label, index, k);
+                IMG_SP(k).borders(index) = is_border;
                 if is_border
-                    % 1:IMG.K are already set up for neighbor 1:IMG.K, so
+                    % 1:IMG_K are already set up for neighbor 1:IMG_K, so
                     % only update them for the new SPs
-                    if k<=IMG.K
-                        old_neighbors = IMG.SP(k).neighbors(1:IMG.K);
+                    if k<=IMG_K
+                        old_neighbors = IMG_SP(k).neighbors(1:IMG_K);
                     end
-                    IMG.SP(k) = SP_update_neighbors_add_self(IMG.SP(k), IMG.label, index);
-                    if k<=IMG.K
-                        IMG.SP(k).neighbors(1:IMG.K) = old_neighbors;
+                    IMG_SP(k) = SP_update_neighbors_add_self(IMG_SP(k), IMG_label, index);
+                    if k<=IMG_K
+                        IMG_SP(k).neighbors(1:IMG_K) = old_neighbors;
                     end
                 end
             end
@@ -487,42 +497,42 @@ function IMG = U_connect_newSP(IMG, old_k, bbox, num_SP)
         %printf("oops... kmeans gives %d connected components\n",label_count);
         pix_counts = zeros(label_count, 1);
         for i=1:label_count
-            pix_counts(i) = IMG.SP(IMG.K+i).N;
+            pix_counts(i) = IMG_SP(IMG_K+i).N;
         end
-        check_labels = (IMG.K+1):(IMG.K+label_count);
+        check_labels = (IMG_K+1):(IMG_K+label_count);
         
         [~, ind_counts] = sort(pix_counts, 1, 'ascend');
         
-        neighbors = false(IMG.K+label_count, 1);
+        neighbors = false(IMG_K+label_count, 1);
         for i=1:label_count-num_SP
             max_k = -1;
             max_E = -inf;
             
-            [max_E, max_k] = move_merge_SP_propose_region(IMG, IMG.K+ind_counts(i), neighbors, check_labels, max_E, max_k);
+            [max_E, max_k] = move_merge_SP_propose_region(IMG_label, IMG_SP, IMG_SP_old, model_order_params, IMG_K+ind_counts(i), neighbors, check_labels, max_E, max_k);
             
             if(max_k==-1 || max_E==-1)
                 disp('the redundant SP doesnt merge within the range');
                 save('connect_newSP.mat');
             end
             
-            IMG = U_set_label_from_SP_pixels(IMG, IMG.SP(IMG.K+ind_counts(i)), max_k);
-            IMG = U_merge_SPs(IMG, max_k, IMG.K+ind_counts(i));
+            IMG_label = U_set_label_from_SP_pixels(IMG_label, IMG_SP(IMG_K+ind_counts(i)), max_k);
+            IMG_SP = U_merge_SPs(IMG_SP, IMG_label, max_k, IMG_K+ind_counts(i));
         end
 
         % relabel SPs
         %printf("relabel\n");
-        max_k = IMG.K+1;
+        max_k = IMG_K+1;
         for i=1:num_SP
-            while SP_is_empty(IMG, max_k)
+            while (index > numel(IMG_SP) || isempty(IMG_SP(index).N) || IMG_SP(index).N == 0)
                 max_k = max_k+1;
-                if(max_k>IMG.max_SPs)
+                if(max_k>IMG_max_SPs)
                     disp('there should be more nonempty SPs..\n');
                 end
             end
-            if max_k~=IMG.K+i
+            if max_k~=IMG_K+i
                 %fetch stuff far behind to here
-                IMG = U_set_label_from_SP_pixels(IMG, IMG.SP(max_k), IMG.K+i);
-                IMG = U_merge_SPs(IMG, IMG.K+i, max_k);
+                IMG_label = U_set_label_from_SP_pixels(IMG_label, IMG_SP(max_k), IMG_K+i);
+                IMG_SP = U_merge_SPs(IMG_SP, IMG_label, IMG_K+i, max_k);
                 %printf("pair up %d,%d\n",(K+i),max_k);
                 %relabel to the first two ...
             end
@@ -532,15 +542,16 @@ function IMG = U_connect_newSP(IMG, old_k, bbox, num_SP)
 end
 
 
-function [max_E, max_k] = move_merge_SP_propose_region(IMG, k, neighbors, check_labels, max_E, max_k)
+function [max_E, max_k] = move_merge_SP_propose_region(IMG_label, IMG_SP, IMG_SP_old, model_order_params, k, neighbors, check_labels, max_E, max_k)
 
-    neighbors = U_find_border_SP(IMG, k, neighbors);
+    neighbors = U_find_border_SP(IMG_label, IMG_SP, k, neighbors);
 
     % loop through all neighbors
-    true_neighbors = find(neighbors)';
-    for merge_k=intersect(true_neighbors, check_labels)
+    neighbor_intersection = intersect(find(neighbors)', check_labels);
+    for merge_k_index=1:length(neighbor_intersection);
+        merge_k = neighbor_intersection(merge_k_index);
         % calculate the energy
-        tmp_E = U_move_merge_calc_delta(IMG, k, merge_k);
+        tmp_E = U_move_merge_calc_delta(IMG_SP(k), IMG_SP(merge_k), IMG_SP_old(k), IMG_SP_old(merge_k), model_order_params);
         if(tmp_E>max_E)
             max_E = tmp_E;
             max_k = merge_k;
@@ -567,17 +578,23 @@ end
 % --     - SP1_old : indicates if SP1 is an old SP
 % --     - SP2_old : indicates if SP2 is an old SP
 % --------------------------------------------------------------------------
-function prob = move_split_calc_delta(IMG, SP1, SP2, new_SP1, new_SP2, SP1_old, SP2_old)
+function prob = move_split_calc_delta(model_order_params, SP1, SP2, new_SP1, new_SP2)
     prob = SP_log_likelihood_test_merge1(SP1, new_SP1);
     prob = prob + SP_log_likelihood_test_merge1(SP2, new_SP2);
     prob = prob - SP_log_likelihood_test_merge2(SP1, new_SP1, new_SP2);
     prob = prob - SP2.log_likelihood;
 
     % split
-    prob = prob + U_calc_model_order(IMG, SP1.N + new_SP1.N, SP1_old);
-    prob = prob + U_calc_model_order(IMG, SP2.N + new_SP2.N, SP2_old);
+    size1 = SP1.N + new_SP1.N;
+    size_var1 = (model_order_params.area - size1/2)*size1/model_order_params.area_var;
+    size2 = SP2.N + new_SP2.N;
+    size_var2 = (model_order_params.area - size2/2)*size2/model_order_params.area_var;
 
     % not split
-    prob = prob - U_calc_model_order(IMG, SP1.N + new_SP1.N + new_SP2.N, SP1_old);
-    prob = prob - U_calc_model_order(IMG, SP2.N, SP2_old);
+    size3 = SP1.N + new_SP1.N + new_SP2.N;
+    size_var3 = (model_order_params.area - size3/2)*size3/model_order_params.area_var;
+    size4 = SP2.N;
+    size_var4 = (model_order_params.area - size4/2)*size4/model_order_params.area_var;
+
+    prob = prob + size_var1 + size_var2 - size_var3 - size_var4;
 end
