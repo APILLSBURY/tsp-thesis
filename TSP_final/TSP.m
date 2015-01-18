@@ -86,8 +86,8 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             % INITIALIZE IMAGE
             disp('initializing IMG');
      
-            IMG_params.cov_var_a;
-            IMG_params.cov_var_p;
+            IMG_cov_var_a = IMG_params.cov_var_a;
+            IMG_cov_var_p = IMG_params.cov_var_p;
             IMG_alive_dead_changed = true;
 
             % Build IMG structure
@@ -350,8 +350,8 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
                 display_img(IMG_w, IMG_label, it, oim);
             end
             
-            [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, 1);
-            E(end+1) = U_calc_energy(IMG_N, IMG_SP, IMG_SP_old, model_order_params);
+            [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, IMG_N, IMG_new_SP, 1);
+            E(end+1) = U_calc_energy(IMG_N, IMG_SP, IMG_SP_old, model_order_params, IMG_new_SP);
             converged = IMG_K - oldK < 2;
 
             if (dispOn)
@@ -364,8 +364,8 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         if (frame_it>1)
             disp('merging, splitting, switching, localonlying');
             IMG_SP_changed(:) = true;
-            [IMG_label, IMG_SP, ~, ~, IMG_SP_old] = merge_move(IMG_label, IMG_SP, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, model_order_params, 1);
-            [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, 10);
+            [IMG_K, IMG_label, IMG_SP, ~, ~, IMG_SP_old] = merge_move(IMG_label, IMG_SP, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, model_order_params, IMG_K, 1);
+            [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, IMG_N, IMG_new_SP, 10);
             [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = switch_move(IMG_label, IMG_SP, IMG_K, IMG_N, IMG_SP_old, IMG_SP_changed, IMG_max_UID, IMG_max_SPs, IMG_alive_dead_changed, IMG_new_SP, model_order_params, IMG_new_pos, IMG_new_app);
             [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, 10);
         end
@@ -379,27 +379,25 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             move_times = zeros(1,5);
 
             if (~IMG_params.reestimateFlow)
-                IMG_SP_changed = old_SP_changed;
                 disp('localonly_move');
                 tic;[IMG_K, IMG_label, IMG_SP, SP_changed1, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, 150);move_times(2)=toc;
                 SP_changed0 = SP_changed1;
             else
                 disp('local and localonly');
-                IMG_SP_changed = old_SP_changed;
                 tic;[IMG_K, IMG_label, IMG_SP, SP_changed0, IMG_max_UID, IMG_alive_dead_changed, IMG_Sxy, IMG_Syy, IMG_SP_old] = local_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_prev_pos_mean, IMG_prev_K, IMG_prev_precision, IMG_prev_covariance, IMG_Sxy, IMG_Syy, 50);move_times(1)=toc;
                 tic;[IMG_K, IMG_label, IMG_SP, SP_changed1, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, 5);move_times(2)=toc;
             end
             if (frame_it>1 && it<5)
                 disp('merge, split, switch');
-                tic;[IMG_label, IMG_SP, SP_changed2, IMG_alive_dead_changed, IMG_SP_old] = merge_move(IMG_label, IMG_SP, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, model_order_params, 1);move_times(3)=toc;
-                tic;[IMG_K, IMG_label, IMG_SP, SP_changed3, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, 1);move_times(4)=toc;
+                tic;[IMG_K, IMG_label, IMG_SP, SP_changed2, IMG_alive_dead_changed, IMG_SP_old] = merge_move(IMG_label, IMG_SP, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, model_order_params, IMG_K, 1);move_times(3)=toc;
+                tic;[IMG_K, IMG_label, IMG_SP, SP_changed3, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, IMG_N, IMG_new_SP, 1);move_times(4)=toc;
                 tic;[IMG_K, IMG_label, IMG_SP, SP_changed4, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = switch_move(IMG_label, IMG_SP, IMG_K, IMG_N, IMG_SP_old, IMG_SP_changed, IMG_max_UID, IMG_max_SPs, IMG_alive_dead_changed, IMG_new_SP, model_order_params, IMG_new_pos, IMG_new_app);move_times(5)=toc;
                 IMG_SP_changed = SP_changed0 | SP_changed1 | SP_changed2 | SP_changed3 | SP_changed4;
             else
                 IMG_SP_changed = SP_changed0 | SP_changed1;
             end
 
-            E(end+1) = U_calc_energy(IMG_N, IMG_SP, IMG_SP_old, model_order_params);
+            E(end+1) = U_calc_energy(IMG_N, IMG_SP, IMG_SP_old, model_order_params, IMG_new_SP);
             disp(numel(IMG_SP));
             converged = ~any(~arrayfun(@(x)(isempty(x{1})), {IMG_SP(:).N}) & IMG_SP_changed(1:IMG_K));
 

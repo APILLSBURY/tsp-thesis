@@ -11,7 +11,7 @@
 % == Converted to MATLAB by Andrew Pillsbury 12-4-2014
 % =============================================================================
 
-function [IMG_label, IMG_SP, IMG_SP_changed, IMG_alive_dead_changed, IMG_SP_old]  = merge_move(IMG_label, IMG_SP, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, model_order_params, its)
+function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_alive_dead_changed, IMG_SP_old]  = merge_move(IMG_label, IMG_SP, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, model_order_params, IMG_K, its)
     xdim = size(IMG_label, 1);
     for i=1:its
         % choose a random order of super pixels
@@ -61,9 +61,12 @@ function [IMG_label, IMG_SP, IMG_SP_changed, IMG_alive_dead_changed, IMG_SP_old]
                     IMG_SP = U_merge_SPs(IMG_SP, IMG_label, k, max_k);
                     if IMG_SP_old(max_k)
                         IMG_alive_dead_changed = true;
+                    elseif max_k<numel(IMG_SP)
+                        IMG_label = U_set_label_from_SP_pixels(IMG_label, IMG_SP(numel(IMG_SP)), max_k);
+                        IMG_SP = U_merge_SPs(IMG_SP, IMG_label, max_k, numel(IMG_SP));
+                        IMG_SP(numel(IMG_SP)) = [];
+                        IMG_K = IMG_K-1;
                     end
-                    
-                    %ELSE DELETE IMG_SP(max_k)?
                 end
             end
         end

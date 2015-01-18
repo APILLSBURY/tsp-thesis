@@ -1,4 +1,4 @@
-function E = U_calc_energy(IMG_N, IMG_SP, IMG_SP_old, model_order_params)
+function E = U_calc_energy(IMG_N, IMG_SP, IMG_SP_old, model_order_params, IMG_new_SP)
     E = 0;
     numEmpty = 0;
     for k=1:IMG_N
@@ -23,6 +23,6 @@ function E = U_calc_energy(IMG_N, IMG_SP, IMG_SP_old, model_order_params)
             numEmpty = numEmpty + 1;
         end
     end
-    new_SP = create_SP_new(IMG);
-    E = E + numEmpty*(new_SP.log_likelihood + U_calc_model_order(IMG, 0, false));
+    
+    E = E + numEmpty*IMG_new_SP.log_likelihood;
 end

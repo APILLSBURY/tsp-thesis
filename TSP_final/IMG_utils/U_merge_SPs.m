@@ -28,7 +28,11 @@ function IMG_SP = U_merge_SPs(IMG_SP, IMG_label, index, index_other)
             disp(n);
             disp(numel(IMG_SP));
         elseif IMG_SP(n).neighbors(index)>0
-            IMG = U_fix_neighbors_self(IMG, n);
+            IMG_SP(n).neighbors = zeros(size(IMG_SP(n).neighbors));
+            found_borders = find(IMG_SP(n).borders);
+            for i=1:length(found_borders)
+                IMG_SP(n) = SP_update_neighbors_add_self(IMG_SP(n), IMG_label, found_borders(i));
+            end
         else
             IMG_SP(n).neighbors(index) = IMG_SP(n).neighbors(index_other);
             IMG_SP(n).neighbors(index_other) = 0;
