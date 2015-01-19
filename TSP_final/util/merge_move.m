@@ -12,6 +12,7 @@
 % =============================================================================
 
 function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_alive_dead_changed, IMG_SP_old]  = merge_move(IMG_label, IMG_SP, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, model_order_params, IMG_K, its)
+    disp('merge_move');
     xdim = size(IMG_label, 1);
     for i=1:its
         % choose a random order of super pixels
@@ -45,10 +46,8 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_alive_dead_changed, IMG_
                 % fix neighbors for the next super pixel
                 neighbors = false(size(neighbors));
 
-                fprintf('max_E = %f\n', max_E);
                 % merge if it increases energy
                 if (max_E>0)
-                    disp('max e is greater than 0');
                     % change the labels
                     found_pixels = find(IMG_SP(max_k).pixels);
                     for index=1:found_pixels

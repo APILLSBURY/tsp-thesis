@@ -14,6 +14,7 @@
 
 
 function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, IMG_N, IMG_new_SP, its)
+    disp('split_move');
     for i=1:its
         % choose a random order of super pixels
         Nsp = numel(IMG_SP);
@@ -47,13 +48,13 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
 
         for kindex=1:length(perm)
             k = perm(kindex);
-            disp('rar');
-            disp(k);
-            disp(numel(IMG_SP));
-            disp(length(energies));
-            disp(length(IMG_SP_changed);
+%             disp('rar');
+%             disp(k);
+%             disp(numel(IMG_SP));
+%             disp(length(energies));
+%             disp(length(IMG_SP_changed));
             if k<=numel(IMG_SP) && (any(IMG_SP(k).neighbors) && (IMG_SP(k).N>mean_area || energies(k) < threshold) && IMG_SP_changed(k))
-                [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_N, IMG_new_SP, k);
+                [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_N, IMG_new_SP, IMG_SP_changed, k);
                 
                 %REMOVE EXCESS SPs
                 curr_SP = numel(IMG_SP);
@@ -70,7 +71,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
 end
 
 
-function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_N, IMG_new_SP, index)
+function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_N, IMG_new_SP, IMG_SP_changed, index)
     num_SP = 2;
     if ~(index > numel(IMG_SP) || isempty(IMG_SP(index).N) || IMG_SP(index).N == 0) && IMG_SP(index).N > num_SP
         new_ks = ones(num_SP, 1) * -1;
@@ -87,7 +88,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
             IMG_label = U_set_label_from_SP_pixels(IMG_label, IMG_SP(new_ks(1)), index);
 
             % merge the super pixels
-            disp(IMG_SP(new_ks(1)).N);
+%            disp(IMG_SP(new_ks(1)).N);
             IMG_SP = U_merge_SPs(IMG_SP, IMG_label, index, new_ks(1)); %need to delete
             IMG_SP_changed(index) = true;
             
@@ -121,11 +122,11 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
         else
             IMG_SP_changed(index) = false;
         end
-        disp('kaboom');
-        disp(ksplit);
-        disp(numel(IMG_SP));
-        disp(new_ks);
-        disp(max_E);
+%         disp('kaboom');
+%         disp(ksplit);
+%         disp(numel(IMG_SP));
+%         disp(new_ks);
+%         disp(max_E);
     end
 end
 

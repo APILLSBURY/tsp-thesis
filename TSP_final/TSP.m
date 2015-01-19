@@ -145,7 +145,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             IMG_label = random_init(IMG_xdim, IMG_ydim, IMG_w, IMG_K);
             IMG_label(~IMG_boundary_mask) = 0;
             IMG_max_SPs = max(IMG_K + IMG_area, IMG_K * 20);
-
+            
             % 3. Topology Table Look Up
             load topology_tables;
             IMG_T4Table = tc.T4Table;
@@ -201,7 +201,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             vx = -flow.bvx;
             vy = -flow.bvy;
             save('pre_prop.mat');
-            
+            disp('propagate SPs');
             % IMAGE PROPAGATION
             
             % delete the SPs that are only in the boundary, i.e are occluded
@@ -344,7 +344,6 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
 
             oldK = IMG_K;
             IMG_SP_changed(:) = true;
-            disp('splitting');
 
             if (dispOn)
                 display_img(IMG_w, IMG_label, it, oim);
@@ -379,7 +378,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             move_times = zeros(1,5);
 
             if (~IMG_params.reestimateFlow)
-                disp('localonly_move');
+                disp('localonly_moving');
                 tic;[IMG_K, IMG_label, IMG_SP, SP_changed1, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, 150);move_times(2)=toc;
                 SP_changed0 = SP_changed1;
             else
@@ -398,7 +397,6 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             end
 
             E(end+1) = U_calc_energy(IMG_N, IMG_SP, IMG_SP_old, model_order_params, IMG_new_SP);
-            disp(numel(IMG_SP));
             converged = ~any(~arrayfun(@(x)(isempty(x{1})), {IMG_SP(:).N}) & IMG_SP_changed(1:IMG_K));
 
             if (dispOn)

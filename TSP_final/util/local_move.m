@@ -12,7 +12,11 @@
 % == Converted to MATLAB by Andrew Pillsbury 12-4-2014
 % =============================================================================
 function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old, IMG_Sxy, IMG_Syy] = local_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_prev_pos_mean, IMG_prev_K, IMG_prev_precision, IMG_prev_covariance, IMG_Sxy, IMG_Syy, its)
-    for it=1:its
+    disp('local_move');
+    for iter=1:its
+        if mod(iter,10)==0
+            fprintf('local iter=%d\n',iter);
+        end
         
         %COMPUTE THE FLOW
         

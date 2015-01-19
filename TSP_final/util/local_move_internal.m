@@ -5,7 +5,7 @@
 % --------------------------------------------------------------------------
 function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old, changed] = local_move_internal(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed)
     [xdim, ydim] = size(IMG_label);
-    if (IMG_K>IMG_N)
+    if (IMG_K>length(IMG_SP_changed))
         disp('Ran out of space!');
     end
 
@@ -192,7 +192,7 @@ function [max_prob, max_k] = move_local_calc_delta(IMG_label, IMG_boundary_mask,
             prob = IMG_dummy_log_prob;
         end
     else
-        if (index > numel(IMG_SP) || isempty(IMG_SP(new_k).N) || IMG_SP(new_k).N == 0)
+        if (new_k > numel(IMG_SP) || isempty(IMG_SP(new_k).N) || IMG_SP(new_k).N == 0)
             temp_SP = IMG_new_SP;
             is_old = false;
         else
@@ -242,7 +242,6 @@ end
 function top_ok = check_topology(IMG_label, index, neighborhood, IMG_T4Table)
     [xdim, ydim] = size(IMG_label);
     [x, y] = get_x_and_y_from_index(index, xdim);
-    %fprintf('x=%d, y=%d, xdim=%d, ydim=%d\n', x, y, IMG.xdim, IMG.ydim);
     top_ok = ( x<=1 || topology_number_label(IMG_label, x, y, IMG_label(x-1, y), neighborhood, IMG_T4Table)==1 ) && ...
             ( y<=1 || topology_number_label(IMG_label, x, y, IMG_label(x, y-1), neighborhood, IMG_T4Table)==1 ) && ...
             ( x>=xdim || topology_number_label(IMG_label, x, y, IMG_label(x+1, y), neighborhood, IMG_T4Table)==1 ) && ...
@@ -267,5 +266,5 @@ function value = topology_number_label(IMG_label, x, y, check_label, neighborhoo
             index = index+1;
         end
     end
-    value = IMG_T4Table(index);
+    value = IMG_T4Table(index+1);
 end
