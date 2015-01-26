@@ -185,8 +185,8 @@ function [IMG_label, IMG_SP, max_E, ksplit, new_ks] = move_split_SP_propose(IMG_
             E = move_split_calc_delta(model_order_params, IMG_SP(index), IMG_SP(ktest), IMG_SP(IMG_K+2), IMG_SP(IMG_K+1));
             if (E>max_E)
                 max_E = E;
-                new_ks(1) = K+2;
-                new_ks(2) = K+1;
+                new_ks(1) = IMG_K+2;
+                new_ks(2) = IMG_K+1;
                 ksplit = ktest;
             end
         end
