@@ -158,8 +158,8 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
                             end
                             
                             %if the new TSP is larger, switch the new and old
-                            if IMG_SP(IMG_K).N > IMG_SP(k).N 
-                                disp('doin a switchy thing now!');
+                            if IMG_SP(k).N < IMG_SP(IMG_K).N
+                                
                                 %switch the pixel labels
                                 found_pix = find(IMG_SP(k).pixels);
                                 for pix_index=1:length(found_pix)
@@ -172,21 +172,20 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
                                     IMG_label(x, y) = k;
                                 end
                                 
-                                %switch the other info by merging to a
-                                %temporary SP
                                 if IMG_K+1>IMG_max_SPs
                                     disp('Ran out of space!');
                                 end
+                                
+                                %switch the other info by merging to a
+                                %temporary SP
                                 IMG_SP(IMG_K+1) = new_SP(IMG_new_pos, IMG_new_app, IMG_max_UID, [0, 0], IMG_N, IMG_max_SPs);
                                 IMG_SP = U_merge_SPs(IMG_SP, IMG_label, IMG_K+1, k);
-                                IMG_SP = U_merge_SPs(IMG_SP, IMG_label, k, IMG_K);
-                                IMG_SP = U_merge_SPs(IMG_SP, IMG_label, IMG_K, IMG_K+1);
-                                
-                                %delete the temp SP
-                                IMG_SP(IMG_K+1) = [];
+                                IMG_SP = U_merge_SPs(IMG_SP, IMG_label, IMG_K+1, k);
+                                IMG_SP = U_merge_SPs(IMG_SP, IMG_label, IMG_K+1, k);
                             end
-                            for i=0:4
-                                perm(IMG_K + i) = IMG_K;
+                            for i=0:3
+                                perm(IMG_K + 2*i) = IMG_K;
+                                perm(IMG_K + 2*i + 1) = k;
                             end
                             break;
                         end
