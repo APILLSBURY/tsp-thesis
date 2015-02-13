@@ -339,7 +339,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         IMG_Syy = [];
         converged = false;
         
-        while (~converged && it<=5 && frame_it==1)
+        while ~converged && it<=5 && frame_it==1
             fprintf('initial while loop: it=%d\n', it);
 
             oldK = IMG_K;
@@ -358,7 +358,6 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             end
             it = it + 1;
         end
-
         converged = false;
         if (frame_it>1)
             disp('merging, splitting, switching, localonlying');
@@ -366,7 +365,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             [IMG_K, IMG_label, IMG_SP, ~, ~, IMG_SP_old] = merge_move(IMG_label, IMG_SP, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, model_order_params, IMG_K, 1);
             [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, IMG_N, IMG_new_SP, 10);
             [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = switch_move(IMG_label, IMG_SP, IMG_K, IMG_N, IMG_SP_old, IMG_SP_changed, IMG_max_UID, IMG_max_SPs, IMG_alive_dead_changed, IMG_new_SP, model_order_params, IMG_new_pos, IMG_new_app);
-            [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, 10);
+            [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_max_SPs, 10);
         end
         IMG_SP_changed(:) = true;
         IMG_alive_dead_changed = true;
@@ -378,13 +377,14 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             move_times = zeros(1,5);
 
             if (~IMG_params.reestimateFlow)
+                save('pre_localonly.mat');
                 disp('localonly_moving');
-                tic;[IMG_K, IMG_label, IMG_SP, SP_changed1, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, 150);move_times(2)=toc;
+                tic;[IMG_K, IMG_label, IMG_SP, SP_changed1, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_max_SPs, 150);move_times(2)=toc;
                 SP_changed0 = SP_changed1;
             else
                 disp('local and localonly');
-                tic;[IMG_K, IMG_label, IMG_SP, SP_changed0, IMG_max_UID, IMG_alive_dead_changed, IMG_Sxy, IMG_Syy, IMG_SP_old] = local_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_prev_pos_mean, IMG_prev_K, IMG_prev_precision, IMG_prev_covariance, IMG_Sxy, IMG_Syy, 50);move_times(1)=toc;
-                tic;[IMG_K, IMG_label, IMG_SP, SP_changed1, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, 5);move_times(2)=toc;
+                tic;[IMG_K, IMG_label, IMG_SP, SP_changed0, IMG_max_UID, IMG_alive_dead_changed, IMG_Sxy, IMG_Syy, IMG_SP_old] = local_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_prev_pos_mean, IMG_prev_K, IMG_prev_precision, IMG_prev_covariance, IMG_Sxy, IMG_Syy, IMG_max_SPs, 50);move_times(1)=toc;
+                tic;[IMG_K, IMG_label, IMG_SP, SP_changed1, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_max_SPs, 5);move_times(2)=toc;
             end
             if (frame_it>1 && it<5)
                 disp('merge, split, switch');

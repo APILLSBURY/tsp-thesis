@@ -9,7 +9,8 @@
 % --------------------------------------------------------------------------
 function SP = SP_update_neighbors_self(SP, label)
     SP.neighbors = zeros(size(SP.neighbors));
-    for index=find(SP.borders)'
-        SP = SP_update_neighbors_add_self(SP, label, index);
+    found_borders = find(SP.borders);
+    for index=1:length(found_borders)
+        SP = SP_update_neighbors_add_self(SP, label, found_borders(index));
     end
 end
