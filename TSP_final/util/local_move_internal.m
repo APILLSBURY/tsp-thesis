@@ -209,7 +209,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
 
                                 %if the new TSP is larger, switch the new and old
                                 if IMG_SP(IMG_K).N > IMG_SP(k).N
-                                    fprintf('doin a switchy thing now! IMG_SP(%d).N is %d, IMG_SP(%d).N is %d\n', IMG_K, IMG_SP(IMG_K).N, k, IMG_SP(k).N);
+                                    %fprintf('doin a switchy thing now! IMG_SP(%d).N is %d, IMG_SP(%d).N is %d\n', IMG_K, IMG_SP(IMG_K).N, k, IMG_SP(k).N);
                                     if IMG_SP(k).N == 0
                                         disp('um excuse me why is it 0');
                                     end

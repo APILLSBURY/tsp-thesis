@@ -14,7 +14,7 @@
 
 function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_N, IMG_new_SP, IMG_SP_changed, Nsp, index)
     num_SP = 2;
-    fprintf('doin a split doe! on TSP %d\n', index);
+    %fprintf('doin a split doe! on TSP %d\n', index);
     if ~(index > numel(IMG_SP) || isempty(IMG_SP(index).N) || IMG_SP(index).N == 0) && IMG_SP(index).N > num_SP
         new_ks = ones(num_SP, 1) * -1;
         ksplit = -1;

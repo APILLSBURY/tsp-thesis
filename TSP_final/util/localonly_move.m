@@ -16,7 +16,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
     disp('localonly_move');
     for iter=1:its
         if mod(iter,10)==0
-            fprintf('\nlocalonly iter=%d\n',iter);
+            fprintf('localonly iter=%d\n',iter);
         end
         %imagesc(IMG_label);
         %drawnow;
