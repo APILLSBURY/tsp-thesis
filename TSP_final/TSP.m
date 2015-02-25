@@ -192,15 +192,11 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             
             disp('done IMG_init');
         else
-            % optical flow returns actual x and y flow... flip it
-            vx = zeros(size(oim,1), size(oim,2));
-            vy = zeros(size(oim,1), size(oim,2));
             % load the optical flow
             load([root_flows flow_files(f-1).name]);
 
             vx = -flow.bvx;
             vy = -flow.bvy;
-            save('pre_prop.mat');
             disp('propagate SPs');
             % IMAGE PROPAGATION
             

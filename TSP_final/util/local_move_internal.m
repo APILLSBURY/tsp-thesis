@@ -193,7 +193,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
                                 end
                             end
                             
-                            if count > 10
+                            if count > 6
                                 pos_mean = NormalD_calc_mean(IMG_SP(k).pos);
                                 dist1 = sqrt((pos_mean(1)-x1)^2 + (pos_mean(2)-y1)^2);
                                 dist2 = sqrt((pos_mean(1)-x2)^2 + (pos_mean(2)-y2)^2);
@@ -204,7 +204,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
                                     starting_index = 2;
                                 end
 
-                                fprintf('bfs_splitting on %d and %d\n', k, IMG_K);
+                                %fprintf('bfs_splitting on %d and %d\n', k, IMG_K);
                                 [IMG_SP, IMG_label] = bfs_split(IMG_SP, IMG_label, IMG_N, IMG_data, IMG_boundary_mask, k, IMG_K, starting, starting_index, ~(fat1 && fat2));
 
                                 %if the new TSP is larger, switch the new and old
@@ -324,7 +324,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
                                 if (IMG_SP_old(k))
                                     IMG_alive_dead_changed = true;
                                 else
-                                    fprintf('killing TSP %d in local_move_internal\n', k);
+                                    %fprintf('killing TSP %d in local_move_internal\n', k);
                                     IMG_SP(k) = SP_empty(IMG_SP(k));
                                     IMG_SP_changed(k) = false;
                                 end
@@ -558,7 +558,7 @@ function [IMG_SP, IMG_label] = bfs_split(IMG_SP, IMG_label, IMG_N, IMG_data, IMG
         end
         
         if visited(prev_x, prev_y)
-            disp('we found a loop!');
+            %disp('we found a loop!');
             
             %reset all the pixels we changed
             IMG_label(visited) = k;
@@ -579,7 +579,7 @@ function [IMG_SP, IMG_label] = bfs_split(IMG_SP, IMG_label, IMG_N, IMG_data, IMG
         end
         
         if ~switched && bfs_write > max_pixels
-            fprintf('switching the switch on %d and %d\n', k, IMG_K);
+            %fprintf('switching the switch on %d and %d\n', k, IMG_K);
             IMG_label(visited) = k;
             IMG_SP = U_merge_SPs(IMG_SP, IMG_label, k, IMG_K);
             if starting_index==1
