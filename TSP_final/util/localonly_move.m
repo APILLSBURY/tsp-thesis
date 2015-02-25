@@ -16,11 +16,10 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
     disp('localonly_move');
     for iter=1:its
         %if mod(iter,10)==0
-            fprintf('localonly iter=%d\n',iter);
+            fprintf('\nlocalonly iter=%d\n',iter);
         %end
         imagesc(IMG_label);
         drawnow;
-        disp('drawing');
         [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old, changed] = local_move_internal(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_max_SPs);
         if ~changed
             break;
