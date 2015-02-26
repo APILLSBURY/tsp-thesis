@@ -49,7 +49,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
         for kindex=1:length(perm)
             k = perm(kindex);
             if k<=numel(IMG_SP) && (any(IMG_SP(k).neighbors) && (IMG_SP(k).N>mean_area || energies(k) < threshold) && IMG_SP_changed(k))
-                [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_N, IMG_new_SP, true(size(IMG_SP_changed)), Nsp, k);
+                [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_N, IMG_new_SP, true(size(IMG_SP_changed)), Nsp, k, false);
             end
         end
     end

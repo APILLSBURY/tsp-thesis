@@ -12,7 +12,7 @@
 % == Converted to MATLAB by Andrew Pillsbury 12-05-2014
 % =============================================================================
 
-function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_N, IMG_new_SP, IMG_SP_changed, Nsp, index)
+function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_N, IMG_new_SP, IMG_SP_changed, Nsp, index, forced)
     num_SP = 2;
     %fprintf('doin a split doe! on TSP %d\n', index);
     if ~(index > numel(IMG_SP) || isempty(IMG_SP(index).N) || IMG_SP(index).N == 0) && IMG_SP(index).N > num_SP
@@ -24,7 +24,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
         [IMG_label, IMG_SP, max_E, ksplit, new_ks] = move_split_SP_propose(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_N, IMG_new_SP, index, num_SP, max_E, ksplit, new_ks);
         
         % update
-        if max_E>0
+        if max_E>0 || (forced && new_ks(1) > 0)
             %mexPrintf("split: %f,%d,%d\n",max_E,index,new_ks[0]);
             % update the labels first
             IMG_label = U_set_label_from_SP_pixels(IMG_label, IMG_SP(new_ks(1)), index);
@@ -129,56 +129,6 @@ function [IMG_label, IMG_SP, max_E, ksplit, new_ks] = move_split_SP_propose(IMG_
             end
         end
     end
-%     else
-%         % for refine_move
-%         % split into IMG_SP(index] and IMG_SP(option]
-%         if (~IMG_SP_old(index) && ~IMG_SP_old(option))
-%             SP1_total_pos = IMG_SP(IMG_K-1).pos.total;
-%             N1 = IMG_SP(IMG_K-1).N;
-%             SP2_total_pos = IMG_SP(IMG_K).pos.total;
-%             N2 = IMG_SP(IMG_K).N;
-%             SPK1_total_pos = IMG_SP(IMG_K+1).pos.total;
-%             NK1 = IMG_SP(IMG_K+1).N;
-%             SPK2_total_pos = IMG_SP(IMG_K+2).pos.total;
-%             NK2 = IMG_SP(IMG_K+2).N;
-% 
-%             E_1_K1 = 0;
-%             E_1_K2 = 0;
-%             for d=1:2
-%                 temp = SPK1_total_pos(d)/NK1 - SP1_total_pos(d)/N1;
-%                 E_1_K1 = E_1_K1 + temp*temp;
-%                 temp = SPK2_total_pos(d)/NK2 - SP2_total_pos(d)/N2;
-%                 E_1_K1 = E_1_K1 + temp*temp;
-% 
-%                 temp = SPK1_total_pos(d)/NK1 - SP2_total_pos(d)/N2;
-%                 E_1_K2 = + E_1_K2 + temp*temp;
-%                 temp = SPK2_total_pos(d)/NK2 - SP1_total_pos(d)/N1;
-%                 E_1_K2 = + E_1_K2 + temp*temp;
-%             end
-% 
-%             if (E_1_K1 < E_1_K2)
-%                 new_ks(1) = IMG_K+1;
-%                 new_ks(2) = IMG_K+2;
-%                 max_E = move_split_calc_delta(IMG, IMG_SP(index), IMG_SP(option), IMG_SP(IMG_K+1), IMG_SP(IMG_K+2), IMG_SP_old(index), IMG_SP_old(option));
-%             else
-%                 new_ks(1) = IMG_K+2;
-%                 new_ks(2) = IMG_K+1;
-%                 max_E = move_split_calc_delta(IMG, IMG_SP(index), IMG_SP(option), IMG_SP(IMG_K+2), IMG_SP(IMG_K+1), IMG_SP_old(index), IMG_SP_old(option));
-%             end
-%         else
-%             E_1_K1 = move_split_calc_delta(IMG, IMG_SP(index), IMG_SP(option), IMG_SP(IMG_K+1), IMG_SP(IMG_K+2), IMG_SP_old(index), IMG_SP_old(option));
-%             E_1_K2 = move_split_calc_delta(IMG, IMG_SP(index), IMG_SP(option), IMG_SP(IMG_K+2), IMG_SP(IMG_K+1), IMG_SP_old(index), IMG_SP_old(option));
-% 
-%             if (E_1_K1 > E_1_K2)
-%                 new_ks(1) = IMG_K+1;
-%                 new_ks(2) = IMG_K+2;
-%                 max_E = E_1_K1;
-%             else
-%                 new_ks(1) = IMG_K+2;
-%                 new_ks(2) = IMG_K+1;
-%                 max_E = E_1_K2;
-%             end
-%        end
 end
 
 
@@ -233,12 +183,6 @@ function [IMG_label, bbox, broken] = U_Kmeans_plusplus(IMG_label, IMG_SP, IMG_da
             distvec(pix) = U_dist(IMG_data(pix,:), center(1,:));
         end
 
-        % second is new
-        %seed2 = randi(length(curr_SP.pixels));
-        %while ~curr_SP.pixels(seed) || seed2 == seed
-        %    seed2 = randi(length(curr_SP.pixels));
-        %end
-
         [~, seed2] = max(distvec);
         [x, y] = get_x_and_y_from_index(seed2, xdim);
         if (IMG_label(x, y)~=index)
@@ -262,29 +206,6 @@ function [IMG_label, bbox, broken] = U_Kmeans_plusplus(IMG_label, IMG_SP, IMG_da
             disp('inconsistency about cluster label');
         end
         center(2,:) = IMG_data(seed2,:);
-
-%     elseif (~old_split1 && old_split2) % new old
-%         center(2,1:2) = IMG_SP(index2).pos.mean;
-%         center(2,3:5) = IMG_SP(index2).app.mean;
-% 
-%         for pix=true_pix
-%             distvec(pix) = U_dist(IMG_data(pix,:), center(2,:));
-%         end
-% 
-%         % first is new
-%         [~, seed] = max(distvec);
-%         [x, y] = get_x_and_y_from_index(seed, xdim);
-%         if (IMG_label(x, y)~=index)
-%             disp('inconsistency about cluster label');
-%         end
-%         center(1,:) = IMG_data(seed,:);
-% 
-%     else % old old
-%         center(1,1:2) = curr_SP.pos.mean;
-%         center(1,3:5) = curr_SP.app.mean;
-% 
-%         center(2,1:2) = IMG_SP(index2).pos.mean;
-%         center(2,3:5) = IMG_SP(index2).app.mean;
      end
 
     %2. kmeans ++ iterations
