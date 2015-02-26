@@ -369,7 +369,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         it = 0;
         while (~converged && it<20)
             it = it + 1;
-            fprintf('Big while loop: it=%d\n', it);
+            fprintf('\nBig while loop: it=%d\n', it);
             move_times = zeros(1,5);
 
             if (~IMG_params.reestimateFlow)

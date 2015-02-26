@@ -19,16 +19,16 @@
 %% infer the TSPs
 
 % parameters for TSPs
-K = 10;
-root = 'sequences/my_wheelock/';
+K = 4;
+root = 'sequences/wheelock/';
 files = dir([root '*.jpg']);
-dispOn = true;
+dispOn = false;
 
 % infer the TSPs
-[sp_labels1] = TSP(K, root, files, dispOn);
+[sp_labels] = TSP(K, root, files, dispOn, 1:2);
 
 % save the results
-save('results/sp_labels1_wheelock.mat', 'sp_labels1');
+save('results/sp_labels_wheelock.mat', 'sp_labels');
 
 %% view the results
 % load('results/sp_labels_girl.mat');
@@ -37,4 +37,4 @@ save('results/sp_labels1_wheelock.mat', 'sp_labels1');
 %root = 'sequences/girl/';
 
 % view the TSPs
-view_sp_gui(sp_labels1, root);
+%view_sp_gui(sp_labels1, root);

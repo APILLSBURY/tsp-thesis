@@ -47,7 +47,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
 
             % switch with best label
             if best_k>0 && best_energy>0
-                disp('Switchin!');
+%                disp('Switchin!');
                 % change the labels
                 found_pix = find(IMG_SP(k).pixels);
                 for index=1:length(found_pix)
