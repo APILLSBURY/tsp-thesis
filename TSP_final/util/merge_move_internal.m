@@ -24,14 +24,15 @@ function [IMG_label, IMG_SP, IMG_K, IMG_SP_changed, IMG_alive_dead_changed] = me
         IMG_SP_changed(max_k) = true;
 
         IMG_SP = U_merge_SPs(IMG_SP, IMG_label, k, max_k);
-
-        if IMG_SP_old(max_k)
-            IMG_alive_dead_changed = true;
-        elseif max_k<numel(IMG_SP)
-            IMG_label = U_set_label_from_SP_pixels(IMG_label, IMG_SP(numel(IMG_SP)), max_k);
-            IMG_SP = U_merge_SPs(IMG_SP, IMG_label, max_k, numel(IMG_SP));
-            IMG_SP(numel(IMG_SP)) = [];
-            IMG_K = IMG_K-1;
+        if ~forced
+            if IMG_SP_old(max_k)
+                IMG_alive_dead_changed = true;
+            elseif max_k<numel(IMG_SP)
+                IMG_label(IMG_label==numel(IMG_SP)) = max_k;
+                IMG_SP = U_merge_SPs(IMG_SP, IMG_label, max_k, numel(IMG_SP));
+                IMG_SP(numel(IMG_SP)) = [];
+                IMG_K = IMG_K-1;
+            end
         end
     end
 end
