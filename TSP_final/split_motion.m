@@ -3,7 +3,7 @@ load('ready_for_motion_split.mat');
 total_flow = zeros(xdim, ydim);
 total_flow(IMG_w+1:end-IMG_w, IMG_w+1:end-IMG_w) = abs(flow.bvx) + abs(flow.bvy);
 
-
+denominator = 10;
 for count=1:10
     fprintf('split motion iter %d\n', count);
 
@@ -40,21 +40,24 @@ for count=1:10
 %         [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, false(size(IMG_SP_old)), IMG_alive_dead_changed, IMG_N, IMG_new_SP, true(size(IMG_SP_changed)), IMG_K, sorted_aggregate_indices(k), true);
 %         k = k-1;
 %     end
-    merge_percentage = floor(length(sorted_gravity_indices)/12);
-    split_percentage = floor(length(sorted_gravity_indices)/6);
-
-    for k_index=1:merge_percentage
+    percentage = floor(length(sorted_gravity_indices)/denominator);
+    if percentage<2
+        break;
+    end
+    
+    for k_index=1:percentage
         k = sorted_gravity_indices(k_index);
         fprintf('merging %d, k=%d\n', k, k_index);
         [IMG_label, IMG_SP, IMG_K, IMG_SP_changed, IMG_alive_dead_changed] = merge_move_internal(IMG_label, IMG_SP, IMG_K, IMG_SP_changed, IMG_alive_dead_changed, IMG_SP_old, model_order_params, k, true);
     end
-    for k_index=length(sorted_gravity_indices)-split_percentage:length(sorted_gravity_indices)
+    for k_index=length(sorted_gravity_indices)-percentage:length(sorted_gravity_indices)
         k = sorted_gravity_indices(k_index);
         if IMG_SP(k).N ~= 0
             fprintf('splitting %d, k=%d\n', k, k_index);
             [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, false(size(IMG_SP_old)), IMG_alive_dead_changed, IMG_N, IMG_new_SP, true(size(IMG_SP_changed)), IMG_K, k, true);
         end
     end
+    denominator = denominator*2;
 end
 
 [IMG_K, IMG_label, IMG_SP, SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_max_SPs, 150);
