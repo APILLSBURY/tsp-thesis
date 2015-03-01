@@ -1,10 +1,10 @@
-function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_resize(IMG_label, IMG_w, flow, IMG_K, IMG_SP, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_alive_dead_changed, IMG_N, IMG_new_SP, IMG_SP_old, iters)
+function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_resize(IMG_label, IMG_w, flow, IMG_K, IMG_SP, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_alive_dead_changed, IMG_N, IMG_new_SP, IMG_SP_old, IMG_SP_changed, iters)
     [xdim, ydim] = size(IMG_label);
     total_flow = zeros(xdim, ydim);
     total_flow(IMG_w+1:end-IMG_w, IMG_w+1:end-IMG_w) = abs(flow.bvx) + abs(flow.bvy);
 
     denominator = 2;
-    for iter=1:iters
+    for iter=1:iters*2
         fprintf('split motion iter %d\n', iter);
 
         % calculate gravity where mass is the SP_aggregate_flow
@@ -40,7 +40,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
         for k_index=length(sorted_gravity_indices)-fraction:length(sorted_gravity_indices)
             k = sorted_gravity_indices(k_index);
             if IMG_SP(k).N ~= 0
-                if iter <= iters/2
+                if iter <= iters
                     fprintf('splitting %d, k=%d\n', k, k_index);
                     [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_split_SP(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, false(size(IMG_SP_old)), IMG_alive_dead_changed, IMG_N, IMG_new_SP, true(size(IMG_SP_changed)), IMG_K, k, true);
                 else
@@ -49,7 +49,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
                 end
             end
         end
-        if iter <= iters/2
+        if iter <= iters
             denominator = denominator+1;
         else
             denominator = denominator*2;

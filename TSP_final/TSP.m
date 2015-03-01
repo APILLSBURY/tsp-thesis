@@ -356,13 +356,14 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         end
         converged = false;
         if (frame_it>1)
-            disp('merging, splitting, switching, localonlying');
+            disp('merging, splitting, switching, resizing, localonlying');
             IMG_SP_changed(:) = true;
             [IMG_K, IMG_label, IMG_SP, ~, ~, IMG_SP_old] = merge_move(IMG_label, IMG_SP, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, model_order_params, IMG_K, 1);
             [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, IMG_N, IMG_new_SP, 10);
             [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = switch_move(IMG_label, IMG_SP, IMG_K, IMG_N, IMG_SP_old, IMG_SP_changed, IMG_max_UID, IMG_max_SPs, IMG_alive_dead_changed, IMG_new_SP, model_order_params, IMG_new_pos, IMG_new_app);
+            save('pre_resize.mat');
+            [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = move_resize(IMG_label, IMG_w, flow, IMG_K, IMG_SP, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_alive_dead_changed, IMG_N, IMG_new_SP, IMG_SP_old, IMG_SP_changed, 10);
             [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_max_SPs, 10);
-            split_motion;
         end
         IMG_SP_changed(:) = true;
         IMG_alive_dead_changed = true;
@@ -371,16 +372,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
         while (~converged && it<20)
             it = it + 1;
             fprintf('\nBig while loop: it=%d\n', it);
-            move_times = zeros(1,6);
-            
-            if (frame_it>1 && it<5)
-                disp('merge, split, switch');
-                tic;[IMG_K, IMG_label, IMG_SP, SP_changed2, IMG_alive_dead_changed, IMG_SP_old] = merge_move(IMG_label, IMG_SP, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, model_order_params, IMG_K, 1);move_times(3)=toc;
-                tic;[IMG_K, IMG_label, IMG_SP, SP_changed3, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, IMG_N, IMG_new_SP, 1);move_times(4)=toc;
-                tic;[IMG_K, IMG_label, IMG_SP, SP_changed4, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = switch_move(IMG_label, IMG_SP, IMG_K, IMG_N, IMG_SP_old, IMG_SP_changed, IMG_max_UID, IMG_max_SPs, IMG_alive_dead_changed, IMG_new_SP, model_order_params, IMG_new_pos, IMG_new_app);move_times(5)=toc;
-                tic;[IMG_K, IMG_label, IMG_SP, SP_changed5, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = move_resize(IMG_label, IMG_w, flow, IMG_K, IMG_SP, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_alive_dead_changed, IMG_N, IMG_new_SP, IMG_SP_old, 16);move_times(6)=toc;
-                IMG_SP_changed = SP_changed0 | SP_changed1 | SP_changed2 | SP_changed3 | SP_changed4 | SP_changed5;
-            end
+            move_times = zeros(1,5);
 
             if (~IMG_params.reestimateFlow)
                 save('pre_localonly.mat');
@@ -391,6 +383,15 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
                 disp('local and localonly');
                 tic;[IMG_K, IMG_label, IMG_SP, SP_changed0, IMG_max_UID, IMG_alive_dead_changed, IMG_Sxy, IMG_Syy, IMG_SP_old] = local_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_prev_pos_mean, IMG_prev_K, IMG_prev_precision, IMG_prev_covariance, IMG_Sxy, IMG_Syy, IMG_max_SPs, 50);move_times(1)=toc;
                 tic;[IMG_K, IMG_label, IMG_SP, SP_changed1, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_max_SPs, 5);move_times(2)=toc;
+            end
+            if (frame_it>1 && it<5)
+                disp('merge, split, switch');
+                tic;[IMG_K, IMG_label, IMG_SP, SP_changed2, IMG_alive_dead_changed, IMG_SP_old] = merge_move(IMG_label, IMG_SP, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, model_order_params, IMG_K, 1);move_times(3)=toc;
+                tic;[IMG_K, IMG_label, IMG_SP, SP_changed3, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, IMG_N, IMG_new_SP, 1);move_times(4)=toc;
+                tic;[IMG_K, IMG_label, IMG_SP, SP_changed4, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = switch_move(IMG_label, IMG_SP, IMG_K, IMG_N, IMG_SP_old, IMG_SP_changed, IMG_max_UID, IMG_max_SPs, IMG_alive_dead_changed, IMG_new_SP, model_order_params, IMG_new_pos, IMG_new_app);move_times(5)=toc;
+                IMG_SP_changed = SP_changed0 | SP_changed1 | SP_changed2 | SP_changed3 | SP_changed4;
+            else
+                IMG_SP_changed = SP_changed0 | SP_changed1;
             end
             
             if ~(frame_it>1 && it<5)
