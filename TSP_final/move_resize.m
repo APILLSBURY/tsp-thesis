@@ -52,7 +52,7 @@ function [IMG_K, IMG_label, IMG_SP, IMG_SP_changed, IMG_max_UID, IMG_alive_dead_
         if iter <= iters
             denominator = denominator+1;
         else
-            denominator = denominator*2;
+            denominator = floor(denominator*1.5);
         end
     end
 end
