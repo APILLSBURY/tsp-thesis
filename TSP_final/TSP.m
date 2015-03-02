@@ -360,11 +360,11 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             IMG_SP_changed(:) = true;
             [IMG_K, IMG_label, IMG_SP, ~, ~, IMG_SP_old] = merge_move(IMG_label, IMG_SP, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, model_order_params, IMG_K, 1);
             [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = split_move(IMG_label, IMG_SP, IMG_K, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_SP_old, IMG_alive_dead_changed, IMG_SP_changed, IMG_N, IMG_new_SP, 10);
-            [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = switch_move(IMG_label, IMG_SP, IMG_K, IMG_N, IMG_SP_old, IMG_SP_changed, IMG_max_UID, IMG_max_SPs, IMG_alive_dead_changed, IMG_new_SP, model_order_params, IMG_new_pos, IMG_new_app);
             if frame_it==2
                 save('pre_resize.mat', IMG_label);
                 [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = move_resize(IMG_label, IMG_w, flow, IMG_K, IMG_SP, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_max_SPs, IMG_data, IMG_boundary_mask, model_order_params, IMG_alive_dead_changed, IMG_N, IMG_new_SP, IMG_SP_old, IMG_SP_changed, 10);
             end
+            [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = switch_move(IMG_label, IMG_SP, IMG_K, IMG_N, IMG_SP_old, IMG_SP_changed, IMG_max_UID, IMG_max_SPs, IMG_alive_dead_changed, IMG_new_SP, model_order_params, IMG_new_pos, IMG_new_app);
             [IMG_K, IMG_label, IMG_SP, ~, IMG_max_UID, ~, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_max_SPs, 10);
         end
         IMG_SP_changed(:) = true;
@@ -377,7 +377,7 @@ function [sp_labels] = TSP(K, root, files, dispOn, frames)
             move_times = zeros(1,5);
 
             if (~IMG_params.reestimateFlow)
-                save('pre_localonly.mat');
+                save('pre_localonly.mat', IMG_label);
                 disp('localonly_moving');
                 tic;[IMG_K, IMG_label, IMG_SP, SP_changed1, IMG_max_UID, IMG_alive_dead_changed, IMG_SP_old] = localonly_move(IMG_label, IMG_K, IMG_N, IMG_SP_changed, IMG_SP, IMG_T4Table, IMG_boundary_mask, IMG_dummy_log_prob, IMG_new_SP, IMG_SP_old, IMG_data, model_order_params, IMG_new_pos, IMG_new_app, IMG_max_UID, IMG_alive_dead_changed, IMG_max_SPs, 150);move_times(2)=toc;
                 SP_changed0 = SP_changed1;
