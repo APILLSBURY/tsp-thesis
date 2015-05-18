@@ -6,13 +6,11 @@ function frame_rate = write_frames(movie_name, output_folder, img_suffix)
         mkdir(output_folder);
     end
     if numel(dir([output_folder '*.' img_suffix]))==0
-        f=1;
-        while hasFrame(videoObject)
+        frames = read(videoObject);
+        for f = 1:size(frames, 4)
             fprintf('Writing frame %d to disk\n', f);
-            thisFrame = readFrame(videoObject);
             frame_name = fullfile(output_folder, sprintf(['frame%4.4d.' img_suffix], f));
-            imwrite(thisFrame, frame_name, img_suffix);
-            f=f+1;
+            imwrite(frames(:,:,:,f), frame_name, img_suffix);
         end
     end
 end
