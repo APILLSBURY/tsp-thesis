@@ -1,0 +1,3 @@
+command to run matlab in background:
+
+nohup nice matlab -nodisplay -nosplash < demo.m > outfile.txt &

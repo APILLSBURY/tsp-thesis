@@ -1,8 +1,0 @@
-frame_inc = 5
-expansion = 30
-percentage_tolerance = 2
-min_object_percentage = 0.1
-cutoff_iters = 3
-
-1. Create optical flow from m to n where n is a multiple of frame_inc and m = n-2*frame_inc.
-2. Look at each flow file, finding the 
