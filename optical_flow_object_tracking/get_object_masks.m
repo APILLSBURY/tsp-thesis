@@ -1,8 +1,26 @@
 % returns a list of masked images
-function [ims] = get_masked_images(params, root, flow_folder, output_video)
-    disp('Getting masked images...');
-    [objects] = find_masks([root flow_folder], params);
-    fprintf('%d objects found\n', numel(objects));
+function object_masks = get_object_masks(params, root, flow_folder)
+    disp('Finding objects...');
+    objects = find_objects([root flow_folder], params);
+    if numel(objects)==0
+        error('No objects found :(');
+    end
+    
+    % combine similar objects
+    disp('Combining objects...');
+    objects = combine_objects(objects, params.sameness_threshold);
+    
+    % interpolate objects over frames when they're lost and delete objects that don't persist
+    disp('Interpolating objects...');
+    objects = interpolate_objects(objects, params.min_frames_per_object, length(objects(1).found_masks));
+    fprintf('%d objects found!\n', numel(objects));
+    
+    % fill in the masks between every [frame_inc]th mask
+    object_masks = get_intermediate_masks(objects, params);
+end
+
+
+function objects_final_masks = get_intermediate_masks(objects, params)
     objects_final_masks = false(size(objects(1).masks,1), size(objects(1).masks,2), (size(objects(1).masks,3)+1)*params.frame_inc+1, numel(objects));
     for o=1:numel(objects)
         final_masks = false(size(objects_final_masks, 1), size(objects_final_masks, 2), size(objects_final_masks, 3));
@@ -43,43 +61,6 @@ function [ims] = get_masked_images(params, root, flow_folder, output_video)
         end
         objects_final_masks(:,:,:,o) = final_masks;
     end
-    
-    % create a video for each object
-    for o=1:numel(objects)
-        ims = mask_images(objects_final_masks(:,:,:,o), root, params.frame_inc);
-        split_str = strsplit(output_video, '.');
-        output = split_str{1};
-        for s=2:(length(split_str)-1)
-            output = strcat(output, '.', split_str{s});
-        end
-        output = strcat(output, '_obj', num2str(o), '.', split_str{end});
-        write_video(ims, output, params.frame_rate);
-    end
-    
-    %create a combined video for all the objects
-    combined_final_masks = false(size(objects_final_masks(:,:,:,1)));
-    for o=1:numel(objects)
-        combined_final_masks = combined_final_masks | objects_final_masks(:,:,:,o);
-    end
-    ims = mask_images(combined_final_masks, root, params.frame_inc);
-end
-
-
-% takes a list of masks and applies them to the images
-function ims = mask_images(final_masks, root, frame_inc)
-    files = dir([root '*.jpg']);
-    ims = uint8(zeros(size(final_masks, 1), size(final_masks, 2), 3, min(numel(files)-frame_inc, size(final_masks, 3))));
-    for f=(1+frame_inc):(size(ims,4)+frame_inc)
-        findex = f-frame_inc;
-        ims(:,:,:,findex) = imread(fullfile(root,files(f).name));
-        mask = double(final_masks(:,:,findex));
-        mask(mask==0) = 0.15;
-        
-        %apply the mask to the image
-        ims(:,:,1,findex) = uint8(double(ims(:,:,1,findex)) .* mask);
-        ims(:,:,2,findex) = uint8(double(ims(:,:,2,findex)) .* mask);
-        ims(:,:,3,findex) = uint8(double(ims(:,:,3,findex)) .* mask);
-    end
 end
 
 
@@ -107,7 +88,6 @@ function [max_offset_mask, max_row_offset, max_col_offset] = get_overlap(theta_m
         row_offset = round(row_offset);
         col_offset = round(col_offset);
         offset_mask = get_offset_mask(moving_mask, row_offset, col_offset);
-        
         combined_mask = offset_mask & stationary_mask;
         overlap = sum(combined_mask(:));
         if overlap>0
@@ -132,66 +112,30 @@ end
 
 
 % finds a mask for each image
-function objects = find_masks(root, params)
-
+function objects = find_objects(root, params)
     tolerance = 2*pi*params.percentage_tolerance/100;
-   
     files = dir([root '*.mat']);
-    
     max_f = numel(files);
             
     for f=1:max_f
-        fprintf(['Working on ' files(f).name '\n']);
-        for ff=f:2:min(max_f, f+2)
-            if ff~=f
-                old_boolean_mask = boolean_mask;
-            end
-            % flow from past
-            load(fullfile(root, files(ff).name));
-            if ff==f
-                vx = -flow.bvx;
-                vy = -flow.bvy;
-            else
-                final_vx = vx - flow.fvx;
-                final_vy = vy - flow.fvy;
-                vx = flow.fvx;
-                vy = flow.fvy;
-            end
-            additive_flow = abs(vx) + abs(vy);
-
-            % create the masks matrix
-            [xdim, ydim] = size(vx);
-            if ff==1
-                %initialize empty struct array
-                new_obj.masks = false(xdim,ydim,max_f);
-                new_obj.found_masks = false(max_f, 1);
-                new_obj.theta_medians = zeros(max_f, 1);
-                new_obj.dead = false;
-                objects(1) = new_obj;
-                objects(1) = [];
-            end
-
-
-            %make a mask of the flow values
-            additive_flow = additive_flow ./ max(additive_flow(:));
-            for iter=1:params.cutoff_iters
-                cutoff = mean(mean(additive_flow(additive_flow>0)));
-                additive_flow(additive_flow<cutoff) = 0;
-            end
-            additive_flow(additive_flow>=cutoff) = 1;
-
-            boolean_mask = false(size(additive_flow));
-            boolean_mask(additive_flow==1) = true;
+        fprintf('Finding objects in flow file %d/%d\n', f, max_f);
+        
+        % get the boolean mask from the flow
+        [boolean_mask, vx, vy] = get_boolean_flow_mask(f, root, params.cutoff_iters, files);
+       
+        %initialize empty struct array
+        if f==1
+            [xdim, ydim] = size(boolean_mask);
+            new_obj.masks = false(xdim,ydim,max_f);
+            new_obj.found_masks = false(max_f, 1);
+            new_obj.theta_medians = zeros(max_f, 1);
+            new_obj.dead = false;
+            objects(1) = new_obj;
+            objects(1) = [];
         end
         
-        if f<=max_f-2
-            boolean_mask = boolean_mask & old_boolean_mask;
-        else
-            final_vx = vx;
-            final_vy = vy;
-        end
         % make a separate mask for each object by finding connected areas in boolean_mask
-        object_masks = find_levels(boolean_mask);
+        object_masks = find_connected_areas(boolean_mask);
 
         for l=1:size(object_masks, 3)
             % if this mask is below the minimum size, ignore it
@@ -203,7 +147,7 @@ function objects = find_masks(root, params)
             expanded_mask = expand_mask(object_masks(:,:,l), params.expansion);
             
             % find the median theta for this object
-            [theta, theta_median, theta_offset] = get_theta_median(object_masks(:,:,l), final_vx, final_vy);
+            [theta, theta_median, theta_offset] = get_theta_median(object_masks(:,:,l), vx, vy);
 
             % make things that point in the wrong direction false
             % make sure that we're accounting for the values wrapping around
@@ -215,59 +159,64 @@ function objects = find_masks(root, params)
                 expanded_mask(theta>theta_median+tolerance | theta<theta_median-tolerance) = false;
             end
             
-           
-            col_std = std(expanded_mask, 0, 1);
-            row_std = std(expanded_mask, 0, 2);
-            
             % calculate the absolute median theta for this mask by removing the offset
             theta_median = get_absolute_theta(theta_median, theta_offset);
             
             % check to see if it's an object
-            if mean([col_std(col_std>0) row_std(row_std>0)']) > params.std_threshold
-                % check to see if it matches another object
-                max_sameness = 0; % initialize the max sameness
-                max_sameness_object = 0;
-                theta_used = theta_median; % default to the theta_median
-                for o=1:numel(objects)
-                    if ~objects(o).dead
-                        last_idx = find(objects(o).found_masks(1:f-1), 1, 'last');
-                        if last_idx
-                            % create a list of thetas to check
-                            thetas_to_check = theta_median;
-                            ff = f-1;
-                            while ff > 0 && length(thetas_to_check) < 5
-                                if objects(o).found_masks(ff)
-                                    thetas_to_check(end+1) = objects(o).theta_medians(ff);
-                                end
-                                ff = ff - 1;
-                            end
+            col_std = std(expanded_mask, 0, 1);
+            row_std = std(expanded_mask, 0, 2);
+            if mean([col_std(col_std>0) row_std(row_std>0)']) < params.std_threshold
+                continue;
+            end
+            
+            % check to see if it matches another object
+            max_sameness = 0; % initialize the max sameness
+            max_sameness_object = 0;
+            theta_used = theta_median; % default to the theta_median
+            for o=1:numel(objects)
+                % make sure the object isn't dead
+                if objects(o).dead
+                    continue;
+                end
+                
+                % find the most recent found_mask in the given object
+                last_idx = find(objects(o).found_masks(1:f-1), 1, 'last');
+                if isempty(last_idx) % if this index doesn't exist, continue
+                    continue;
+                end
+                
+                % create a list of the last 5 thetas of o to check
+                thetas_to_check = theta_median;
+                ff = f-1;
+                while ff > 0 && length(thetas_to_check) < 5
+                    if objects(o).found_masks(ff)
+                        thetas_to_check(end+1) = objects(o).theta_medians(ff);
+                    end
+                    ff = ff - 1;
+                end
 
-                            % see which recent theta is best
-                            for t=1:length(thetas_to_check)
-                                curr_sameness = sameness(expanded_mask, objects(o).masks(:,:,last_idx), thetas_to_check(t));
-                                if curr_sameness > max_sameness
-                                    max_sameness = curr_sameness;
-                                    max_sameness_object = o;
-                                    theta_used = thetas_to_check(t);
-                                end
-                            end
-                        end
+                % see which recent theta is best
+                for t=1:length(thetas_to_check)
+                    curr_sameness = sameness(expanded_mask, objects(o).masks(:,:,last_idx), thetas_to_check(t));
+                    if curr_sameness > max_sameness
+                        max_sameness = curr_sameness;
+                        max_sameness_object = o;
+                        theta_used = thetas_to_check(t); % store the theta that was used to set later
                     end
                 end
-                
-                % if the new object doesn't match any old objects
-                if max_sameness < params.sameness_threshold
-                    % create a new object
-                    objects(end+1) = new_obj;
-                    max_sameness_object = numel(objects); % this is the object to add the current info to
-                    theta_used = theta_median;
-                end
-                
-                % update the appropriate object with the new information
-                objects(max_sameness_object).masks(:,:,f) = expanded_mask;
-                objects(max_sameness_object).theta_medians(f) = theta_used;
-                objects(max_sameness_object).found_masks(f) = true;
             end
+
+            % if the new object doesn't match any old objects
+            if max_sameness < params.sameness_threshold
+                objects(end+1) = new_obj; % create a new object
+                max_sameness_object = numel(objects); % this is the object to add the current info to
+                theta_used = theta_median;
+            end
+
+            % update the appropriate object with the new information
+            objects(max_sameness_object).masks(:,:,f) = expanded_mask;
+            objects(max_sameness_object).theta_medians(f) = theta_used;
+            objects(max_sameness_object).found_masks(f) = true;
         end
         
         % check to see if objects are "dead", i.e. haven't been updated in a while
@@ -277,14 +226,48 @@ function objects = find_masks(root, params)
             end
         end
     end
-    
-    % combine similar objects
-    disp('Combining objects...');
-    objects = combine_objects(objects, params.sameness_threshold);
-    
-    % interpolate objects over frames when they're lost and delete objects that don't persist
-    disp('Interpolating objects...');
-    objects = interpolate_objects(objects, params.min_frames_per_object, max_f);
+end
+
+
+% get a boolean mask showing the where the flow is highest, and also return
+% the added flow from frames before and after
+function [boolean_mask, final_vx, final_vy] = get_boolean_flow_mask(f, root, cutoff_iters, files)
+    max_f = numel(files);
+    for ff=f:2:min(max_f, f+2)
+        if ff~=f
+            old_boolean_mask = boolean_mask;
+        end
+        % flow from past
+        load(fullfile(root, files(ff).name));
+        if ff==f
+            vx = -flow.bvx;
+            vy = -flow.bvy;
+        else
+            final_vx = vx - flow.fvx;
+            final_vy = vy - flow.fvy;
+            vx = flow.fvx;
+            vy = flow.fvy;
+        end
+        additive_flow = abs(vx) + abs(vy);
+
+        %make a mask of the flow values
+        additive_flow = additive_flow ./ max(additive_flow(:));
+        for iter=1:cutoff_iters
+            cutoff = mean(mean(additive_flow(additive_flow>0)));
+            additive_flow(additive_flow<cutoff) = 0;
+        end
+        additive_flow(additive_flow>=cutoff) = 1;
+
+        boolean_mask = false(size(additive_flow));
+        boolean_mask(additive_flow==1) = true;
+    end
+
+    if f<=max_f-2
+        boolean_mask = boolean_mask & old_boolean_mask;
+    else
+        final_vx = vx;
+        final_vy = vy;
+    end
 end
 
 
@@ -367,8 +350,7 @@ function objects = combine_objects(objects, sameness_threshold)
 end
 
 
-% interpolates objects into missing frames and deletes objects that don't
-% persist
+% interpolate objects into missing frames and delete objects that don't persist
 function objects = interpolate_objects(objects, min_frames_per_object, max_f)
     o=1;
     while o <= numel(objects)
@@ -404,9 +386,9 @@ function objects = interpolate_objects(objects, min_frames_per_object, max_f)
 end
 
 
-% takes a boolean mask and implements a depth first search to find all
-% connected areas
-function object_mask = find_levels(boolean_mask)
+% implements a depth first search to find all connected areas in a boolean
+% matrix
+function object_mask = find_connected_areas(boolean_mask)
     [xdim, ydim] = size(boolean_mask);
     object_mask = logical.empty(xdim, ydim, 0);
     x=1;
@@ -566,6 +548,8 @@ function [theta, theta_median, theta_offset] = get_theta_median(object_mask, vx,
     end
 end
 
+
+% find the absolute theta given a relative theta and an offset
 function theta = get_absolute_theta(theta, theta_offset)
     theta = theta - theta_offset;
     if theta>pi
@@ -575,50 +559,3 @@ function theta = get_absolute_theta(theta, theta_offset)
         theta = theta + 2*pi;
     end
 end
-
-function theta = get_real_theta(mask1, mask2)
-    % get middle x value for mask1
-    x_sum = sum(mask1, 1);
-    middle = sum(x_sum) / 2;
-    total = 0;
-    x1 = find(x_sum, 1)-1;
-    while total < middle
-        x1 = x1+1;
-        total = total + x_sum(x1);
-    end
-    
-    % get middle y value for mask1
-    y_sum = sum(mask1, 2);
-    middle = sum(y_sum) / 2;
-    total = 0;
-    y1 = find(y_sum, 1)-1;
-    while total < middle
-        y1 = y1+1;
-        total = total + y_sum(y1);
-    end
-    
-    % get middle x value for mask2
-    x_sum = sum(mask2, 1);
-    middle = sum(x_sum) / 2;
-    total = 0;
-    x2 = find(x_sum, 1)-1;
-    while total < middle
-        x2 = x2+1;
-        total = total + x_sum(x2);
-    end
-    
-    % get middle y value for mask2
-    y_sum = sum(mask2, 2);
-    middle = sum(y_sum) / 2;
-    total = 0;
-    y2 = find(y_sum, 1)-1;
-    while total < middle
-        y2 = y2+1;
-        total = total + y_sum(y2);
-    end
-    row_dif = y2-y1;
-    col_dif = x2-x1;
-    theta = atan2(row_dif, col_dif);
-end
-        
-    

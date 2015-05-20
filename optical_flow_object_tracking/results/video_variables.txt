@@ -1,138 +1,106 @@
 good_traffic.avi:
 
-addpath('motion_tracker/');
 root = 'sequences/traffic/'; % folder holding flow_folder and image files
 flow_folder = 'flow/'; % name of the folder holding the optical flow files in the root directory
-input_video = 'traffic.avi'; % video to track motion of
+input_video = 'video/traffic.avi'; % video to track motion of
 output_video = 'results/traffic.avi'; % name of video to create
 img_suffix = 'jpg'; % type of images used
-frame_inc = 5; % interval of frames to look at
-expansion = 50; % the amount (radius) to expand each object mask by
-percentage_tolerance = 6; % tolerance for flow direction in radians
-min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
-cutoff_iters = 2; % the number of times to zero out everything below the mean flow
-test = false; % whether we're testing on a specific frame
-sameness_threshold = 0.3;
-std_threshold = 0.1;
-min_frames_per_object = 2;
-frame_rate = 10; % default frame rate in case we're not reading in from a video
+
+params.sameness_threshold = 0.3; % the sameness amount necessary for two masks to be considered the same object
+params.frame_inc = 5; % interval of frames to look at
+params.expansion = 40; % the amount (radius) to expand each object mask by
+params.percentage_tolerance = 8; % tolerance for flow direction in radians
+params.min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
+params.cutoff_iters = 2; % the number of times to zero out everything below the mean flow
+params.std_threshold = 0.2; % the threshold for a mask to be considered an object
+params.min_frames_per_object = 3; % the minimum number of frames that an object can consist of
 
 
-good_wheelock.avi:
+good_wheelock_small.avi:
 
-addpath('motion_tracker/');
-root = 'sequences/wheelock/'; % folder holding flow_folder and image files
+root = 'sequences/wheelock_small/'; % folder holding flow_folder and image files
 flow_folder = 'flow/'; % name of the folder holding the optical flow files in the root directory
-input_video = 'wheelock.avi'; % video to track motion of
-output_video = 'results/wheelock.avi'; % name of video to create
+input_video = 'video/wheelock_small.mov'; % video to track motion of
+output_video = 'results/wheelock_small.avi'; % name of video to create
 img_suffix = 'jpg'; % type of images used
-frame_inc = 5; % interval of frames to look at
-expansion = 20; % the amount (radius) to expand each object mask by
-percentage_tolerance = 6; % tolerance for flow direction in radians
-min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
-cutoff_iters = 2; % the number of times to zero out everything below the mean flow
-test = false; % whether we're testing on a specific frame
-sameness_threshold = 0.3;
-std_threshold = 0.1;
-min_frames_per_object = 2;
-frame_rate = 10; % default frame rate in case we're not reading in from a video
+
+params.sameness_threshold = 0.4; % the sameness amount necessary for two masks to be considered the same object
+params.frame_inc = 5; % interval of frames to look at
+params.expansion = 40; % the amount (radius) to expand each object mask by
+params.percentage_tolerance = 8; % tolerance for flow direction in radians
+params.min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
+params.cutoff_iters = 2; % the number of times to zero out everything below the mean flow
+params.std_threshold = 0.3; % the threshold for a mask to be considered an object
+params.min_frames_per_object = 3; % the minimum number of frames that an object can consist of
 
 
-good_eli_all.avi:
+good_eli.avi:
 
-addpath('motion_tracker/');
-root = 'sequences/eli_all/'; % folder holding flow_folder and image files
+root = 'sequences/eli/'; % folder holding flow_folder and image files
 flow_folder = 'flow/'; % name of the folder holding the optical flow files in the root directory
-input_video = 'eli.mp4'; % video to track motion of
-output_video = 'results/eli_all.avi'; % name of video to create
+input_video = 'video/eli.mp4'; % video to track motion of
+output_video = 'results/eli.avi'; % name of video to create
 img_suffix = 'jpg'; % type of images used
-frame_inc = 5; % interval of frames to look at
-expansion = 40; % the amount (radius) to expand each object mask by
-percentage_tolerance = 6; % tolerance for flow direction in radians
-min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
-cutoff_iters = 2; % the number of times to zero out everything below the mean flow
-test = false; % whether we're testing on a specific frame
-sameness_threshold = 0.3;
-std_threshold = 0.1;
-min_frames_per_object = 2;
-frame_rate = 10; % default frame rate in case we're not reading in from a video
 
-
-good_hanover_traffic.avi:
-
-addpath('motion_tracker/');
-root = 'sequences/hanover_driving/'; % folder holding flow_folder and image files
-flow_folder = 'flow2/'; % name of the folder holding the optical flow files in the root directory
-input_video = 'hanover_driving.avi'; % video to track motion of
-output_video = 'results/hanover_driving.avi'; % name of video to create
-img_suffix = 'jpg'; % type of images used
-frame_inc = 2; % interval of frames to look at
-expansion = 40; % the amount (radius) to expand each object mask by
-percentage_tolerance = 6; % tolerance for flow direction in radians
-min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
-cutoff_iters = 2; % the number of times to zero out everything below the mean flow
-test = false; % whether we're testing on a specific frame
-sameness_threshold = 0.4;
-std_threshold = 0.1;
-min_frames_per_object = 4;
-frame_rate = 10; % default frame rate in case we're not reading in from a video
+params.sameness_threshold = 0.3; % the sameness amount necessary for two masks to be considered the same object
+params.frame_inc = 5; % interval of frames to look at
+params.expansion = 40; % the amount (radius) to expand each object mask by
+params.percentage_tolerance = 8; % tolerance for flow direction in radians
+params.min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
+params.cutoff_iters = 2; % the number of times to zero out everything below the mean flow
+params.std_threshold = 0.25; % the threshold for a mask to be considered an object
+params.min_frames_per_object = 3; % the minimum number of frames that an object can consist of
 
 
 good_wheelock1.mov:
 
-addpath('motion_tracker/');
 root = 'sequences/wheelock1/'; % folder holding flow_folder and image files
 flow_folder = 'flow/'; % name of the folder holding the optical flow files in the root directory
-input_video = 'wheelock1.mov'; % video to track motion of
+input_video = 'video/wheelock1.mov'; % video to track motion of
 output_video = 'results/wheelock1.avi'; % name of video to create
 img_suffix = 'jpg'; % type of images used
-frame_inc = 5; % interval of frames to look at
-expansion = 40; % the amount (radius) to expand each object mask by
-percentage_tolerance = 8; % tolerance for flow direction in radians
-min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
-cutoff_iters = 2; % the number of times to zero out everything below the mean flow
-test = false; % whether we're testing on a specific frame
-sameness_threshold = 0.4;
-std_threshold = 0.2;
-min_frames_per_object = 3;
-frame_rate = 10; % default frame rate in case we're not reading in from a video
+
+params.sameness_threshold = 0.4; % the sameness amount necessary for two masks to be considered the same object
+params.frame_inc = 5; % interval of frames to look at
+params.expansion = 40; % the amount (radius) to expand each object mask by
+params.percentage_tolerance = 8; % tolerance for flow direction in radians
+params.min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
+params.cutoff_iters = 2; % the number of times to zero out everything below the mean flow
+params.std_threshold = 0.2; % the threshold for a mask to be considered an object
+params.min_frames_per_object = 3; % the minimum number of frames that an object can consist of
 
 
 good_tuck.avi:
 
-addpath('motion_tracker/');
 root = 'sequences/tuck/'; % folder holding flow_folder and image files
 flow_folder = 'flow/'; % name of the folder holding the optical flow files in the root directory
-input_video = 'tuck.avi'; % video to track motion of
+input_video = 'video/tuck.avi'; % video to track motion of
 output_video = 'results/tuck.avi'; % name of video to create
 img_suffix = 'jpg'; % type of images used
-frame_inc = 5; % interval of frames to look at
-expansion = 40; % the amount (radius) to expand each object mask by
-percentage_tolerance = 8; % tolerance for flow direction in radians
-min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
-cutoff_iters = 2; % the number of times to zero out everything below the mean flow
-test = false; % whether we're testing on a specific frame
-sameness_threshold = 0.25;
-std_threshold = 0.2;
-min_frames_per_object = 3;
-frame_rate = 10; % default frame rate in case we're not reading in from a video
+
+params.sameness_threshold = 0.2; % the sameness amount necessary for two masks to be considered the same object
+params.frame_inc = 5; % interval of frames to look at
+params.expansion = 40; % the amount (radius) to expand each object mask by
+params.percentage_tolerance = 8; % tolerance for flow direction in radians
+params.min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
+params.cutoff_iters = 2; % the number of times to zero out everything below the mean flow
+params.std_threshold = 0.3; % the threshold for a mask to be considered an object
+params.min_frames_per_object = 3; % the minimum number of frames that an object can consist of
 
 
 good_dirt_cowboy.avi:
 
-addpath('motion_tracker/');
 root = 'sequences/dirt_cowboy/'; % folder holding flow_folder and image files
 flow_folder = 'flow/'; % name of the folder holding the optical flow files in the root directory
-input_video = 'dirt_cowboy.mov'; % video to track motion of
+input_video = 'video/dirt_cowboy.mov'; % video to track motion of
 output_video = 'results/dirt_cowboy.avi'; % name of video to create
 img_suffix = 'jpg'; % type of images used
-frame_inc = 5; % interval of frames to look at
-expansion = 40; % the amount (radius) to expand each object mask by
-percentage_tolerance = 8; % tolerance for flow direction in radians
-min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
-cutoff_iters = 2; % the number of times to zero out everything below the mean flow
-test = false; % whether we're testing on a specific frame
-sameness_threshold = 0.3;
-std_threshold = 0.2;
-min_frames_per_object = 3;
-frame_rate = 10; % default frame rate in case we're not reading in from a video
+
+params.sameness_threshold = 0.3; % the sameness amount necessary for two masks to be considered the same object
+params.frame_inc = 5; % interval of frames to look at
+params.expansion = 40; % the amount (radius) to expand each object mask by
+params.percentage_tolerance = 8; % tolerance for flow direction in radians
+params.min_object_percentage = 1; % the minimum percentage of the image an object can be for it to be taken into consideration
+params.cutoff_iters = 2; % the number of times to zero out everything below the mean flow
+params.std_threshold = 0.3; % the threshold for a mask to be considered an object
+params.min_frames_per_object = 3; % the minimum number of frames that an object can consist of
