@@ -1,0 +1,7 @@
+To do:
+Try with different lengths of time:
+Just forward/back
+Average forward and back
+Add forward and back
+Intersection of forward and back
+Only use areas where most pixels are moving in the same direction (how is optical flow represented?)

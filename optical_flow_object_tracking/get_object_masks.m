@@ -17,97 +17,6 @@ function object_masks = get_object_masks(params, root, flow_folder)
     
     % fill in the masks between every [frame_inc]th mask
     object_masks = get_intermediate_masks(objects, params);
-end
-
-
-function objects_final_masks = get_intermediate_masks(objects, params)
-    objects_final_masks = false(size(objects(1).masks,1), size(objects(1).masks,2), (size(objects(1).masks,3)+1)*params.frame_inc+1, numel(objects));
-    for o=1:numel(objects)
-        final_masks = false(size(objects_final_masks, 1), size(objects_final_masks, 2), size(objects_final_masks, 3));
-        for frame=1:size(objects(o).masks, 3)
-            original_mask = objects(o).masks(:,:,frame);
-            if frame~=1
-                [before_overlap, row_offset_before, col_offset_before] = get_overlap(objects(o).theta_medians(frame), objects(o).masks(:,:,frame-1), objects(o).masks(:,:,frame), false);
-                curr_mask = original_mask | before_overlap;
-            end
-            if frame < size(objects(o).masks,3)
-                [after_overlap, row_offset_after, col_offset_after] = get_overlap(objects(o).theta_medians(frame+1), objects(o).masks(:,:,frame+1), objects(o).masks(:,:,frame), true);
-                curr_mask = original_mask | after_overlap;
-            end
-
-            if frame~=1 && frame < size(objects(o).masks,3)
-                curr_mask = (original_mask & after_overlap) | (original_mask & before_overlap) | (after_overlap & before_overlap);
-            end
-
-            frames_back = params.frame_inc;
-            frames_forward = 0;
-
-            if frame==1
-                frames_back = params.frame_inc;
-                row_offset = -row_offset_after;
-                col_offset = -col_offset_after;
-            elseif frame==size(objects(o).masks,3)
-                frames_forward = params.frame_inc;
-                row_offset = row_offset_before;
-                col_offset = col_offset_before;
-            else
-                row_offset = mean([row_offset_before -row_offset_after]);
-                col_offset = mean([col_offset_before -col_offset_after]);
-            end
-
-            for f=-frames_back:frames_forward
-                final_masks(:,:,frame*params.frame_inc+f+1) = get_offset_mask(curr_mask, round(f*row_offset/params.frame_inc), round(f*col_offset/params.frame_inc));
-            end
-        end
-        objects_final_masks(:,:,:,o) = final_masks;
-    end
-end
-
-
-% finds the maximum overlap between a moving mask and a stationary mask
-% given the direction that the moving mask is going
-% USAGE: theta_median should be the theta for whichever is the later mask
-% set reverse_theta to true when stationary mask is the later mask
-function [max_offset_mask, max_row_offset, max_col_offset] = get_overlap(theta_median, moving_mask, stationary_mask, reverse_theta)
-    if reverse_theta
-        theta_median = theta_median + pi;
-        if theta_median>pi
-            theta_median = theta_median - 2*pi;
-        end
-    end
-
-    [xdim, ydim] = size(moving_mask);
-    max_overlap = -1;
-    max_offset_mask = false(xdim, ydim);
-    max_row_offset = 0;
-    max_col_offset = 0;
-    rho = 0;
-    found_overlap = false;
-    while rho==0 || sum(offset_mask(:))>0 && ~(overlap==0 && found_overlap)
-        [col_offset, row_offset] = pol2cart(theta_median, rho);
-        row_offset = round(row_offset);
-        col_offset = round(col_offset);
-        offset_mask = get_offset_mask(moving_mask, row_offset, col_offset);
-        combined_mask = offset_mask & stationary_mask;
-        overlap = sum(combined_mask(:));
-        if overlap>0
-            found_overlap = true;
-        end
-        if overlap>max_overlap
-            max_overlap = overlap;
-            max_offset_mask = offset_mask;
-            max_row_offset = row_offset;
-            max_col_offset = col_offset;
-        end
-        rho = rho + 5;
-    end
-end
-
-
-% finds the mask that is offset by a given number of rows and columns
-function offset_mask = get_offset_mask(moving_mask, row_offset, col_offset)
-    offset_mask = false(size(moving_mask));
-    offset_mask(max(1+row_offset, 1):min(end, end+row_offset), max(1+col_offset, 1):min(end, end+col_offset)) = moving_mask(max(1, 1-row_offset):min(end-row_offset, end), max(1, 1-col_offset):min(end-col_offset, end));
 end       
 
 
@@ -271,6 +180,51 @@ function [boolean_mask, final_vx, final_vy] = get_boolean_flow_mask(f, root, cut
 end
 
 
+% find the masks to fill in between every [frame_inc]th mask
+function objects_final_masks = get_intermediate_masks(objects, params)
+    objects_final_masks = false(size(objects(1).masks,1), size(objects(1).masks,2), (size(objects(1).masks,3)+1)*params.frame_inc+1, numel(objects));
+    for o=1:numel(objects)
+        final_masks = false(size(objects_final_masks, 1), size(objects_final_masks, 2), size(objects_final_masks, 3));
+        for frame=1:size(objects(o).masks, 3)
+            original_mask = objects(o).masks(:,:,frame);
+            if frame~=1
+                [before_overlap, row_offset_before, col_offset_before] = get_overlap(objects(o).theta_medians(frame), objects(o).masks(:,:,frame-1), objects(o).masks(:,:,frame), false);
+                curr_mask = original_mask | before_overlap;
+            end
+            if frame < size(objects(o).masks,3)
+                [after_overlap, row_offset_after, col_offset_after] = get_overlap(objects(o).theta_medians(frame+1), objects(o).masks(:,:,frame+1), objects(o).masks(:,:,frame), true);
+                curr_mask = original_mask | after_overlap;
+            end
+
+            if frame~=1 && frame < size(objects(o).masks,3)
+                curr_mask = (original_mask & after_overlap) | (original_mask & before_overlap) | (after_overlap & before_overlap);
+            end
+
+            frames_back = params.frame_inc;
+            frames_forward = 0;
+
+            if frame==1
+                frames_back = params.frame_inc;
+                row_offset = -row_offset_after;
+                col_offset = -col_offset_after;
+            elseif frame==size(objects(o).masks,3)
+                frames_forward = params.frame_inc;
+                row_offset = row_offset_before;
+                col_offset = col_offset_before;
+            else
+                row_offset = mean([row_offset_before -row_offset_after]);
+                col_offset = mean([col_offset_before -col_offset_after]);
+            end
+
+            for f=-frames_back:frames_forward
+                final_masks(:,:,frame*params.frame_inc+f+1) = get_offset_mask(curr_mask, round(f*row_offset/params.frame_inc), round(f*col_offset/params.frame_inc));
+            end
+        end
+        objects_final_masks(:,:,:,o) = final_masks;
+    end
+end
+
+
 % combine objects that are the same
 function objects = combine_objects(objects, sameness_threshold)
     o=1;
@@ -383,6 +337,56 @@ function objects = interpolate_objects(objects, min_frames_per_object, max_f)
             o=o+1;
         end
     end
+end
+
+
+% HELPER FUNCTIONS
+
+
+% finds the maximum overlap between a moving mask and a stationary mask
+% given the direction that the moving mask is going
+% USAGE: theta_median should be the theta for whichever is the later mask
+% set reverse_theta to true when stationary mask is the later mask
+function [max_offset_mask, max_row_offset, max_col_offset] = get_overlap(theta_median, moving_mask, stationary_mask, reverse_theta)
+    if reverse_theta
+        theta_median = theta_median + pi;
+        if theta_median>pi
+            theta_median = theta_median - 2*pi;
+        end
+    end
+
+    [xdim, ydim] = size(moving_mask);
+    max_overlap = -1;
+    max_offset_mask = false(xdim, ydim);
+    max_row_offset = 0;
+    max_col_offset = 0;
+    rho = 0;
+    found_overlap = false;
+    while rho==0 || sum(offset_mask(:))>0 && ~(overlap==0 && found_overlap)
+        [col_offset, row_offset] = pol2cart(theta_median, rho);
+        row_offset = round(row_offset);
+        col_offset = round(col_offset);
+        offset_mask = get_offset_mask(moving_mask, row_offset, col_offset);
+        combined_mask = offset_mask & stationary_mask;
+        overlap = sum(combined_mask(:));
+        if overlap>0
+            found_overlap = true;
+        end
+        if overlap>max_overlap
+            max_overlap = overlap;
+            max_offset_mask = offset_mask;
+            max_row_offset = row_offset;
+            max_col_offset = col_offset;
+        end
+        rho = rho + 5;
+    end
+end
+
+
+% finds the mask that is offset by a given number of rows and columns
+function offset_mask = get_offset_mask(moving_mask, row_offset, col_offset)
+    offset_mask = false(size(moving_mask));
+    offset_mask(max(1+row_offset, 1):min(end, end+row_offset), max(1+col_offset, 1):min(end, end+col_offset)) = moving_mask(max(1, 1-row_offset):min(end-row_offset, end), max(1, 1-col_offset):min(end-col_offset, end));
 end
 
 
