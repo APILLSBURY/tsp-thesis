@@ -1,0 +1,21 @@
+Figures:
+1.1) forward flow with mask
+1.2) backward flow with mask
+1.3) final flow with intersection
+
+2.1) separated areas of mask
+2.2) expanded mask
+2.3) mask with bad thetas removed
+2.4) too scattered mask???
+
+3.1) before move: overlap mask, venn diagram style (with arrow in direction of theta)
+3.2) after move: overlap mask, venn diagram style
+
+4.1) object frame1
+4.2) object frame3
+4.3) interpolated object frame2
+
+5.1) venn diagram of object frame1 overlap, object frame2, object frame3 overlap
+5.2) intermediate masks of above mask
+
+6) final images
