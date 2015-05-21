@@ -152,8 +152,8 @@ function [boolean_mask, final_vx, final_vy] = get_boolean_flow_mask(f, root, cut
             vx = -flow.bvx;
             vy = -flow.bvy;
         else
-            final_vx = vx - flow.fvx;
-            final_vy = vy - flow.fvy;
+            final_vx = vx + flow.fvx;
+            final_vy = vy + flow.fvy;
             vx = flow.fvx;
             vy = flow.fvy;
         end
@@ -176,51 +176,6 @@ function [boolean_mask, final_vx, final_vy] = get_boolean_flow_mask(f, root, cut
     else
         final_vx = vx;
         final_vy = vy;
-    end
-end
-
-
-% find the masks to fill in between every [frame_inc]th mask
-function objects_final_masks = get_intermediate_masks(objects, params)
-    objects_final_masks = false(size(objects(1).masks,1), size(objects(1).masks,2), (size(objects(1).masks,3)+1)*params.frame_inc+1, numel(objects));
-    for o=1:numel(objects)
-        final_masks = false(size(objects_final_masks, 1), size(objects_final_masks, 2), size(objects_final_masks, 3));
-        for frame=1:size(objects(o).masks, 3)
-            original_mask = objects(o).masks(:,:,frame);
-            if frame~=1
-                [before_overlap, row_offset_before, col_offset_before] = get_overlap(objects(o).theta_medians(frame), objects(o).masks(:,:,frame-1), objects(o).masks(:,:,frame), false);
-                curr_mask = original_mask | before_overlap;
-            end
-            if frame < size(objects(o).masks,3)
-                [after_overlap, row_offset_after, col_offset_after] = get_overlap(objects(o).theta_medians(frame+1), objects(o).masks(:,:,frame+1), objects(o).masks(:,:,frame), true);
-                curr_mask = original_mask | after_overlap;
-            end
-
-            if frame~=1 && frame < size(objects(o).masks,3)
-                curr_mask = (original_mask & after_overlap) | (original_mask & before_overlap) | (after_overlap & before_overlap);
-            end
-
-            frames_back = params.frame_inc;
-            frames_forward = 0;
-
-            if frame==1
-                frames_back = params.frame_inc;
-                row_offset = -row_offset_after;
-                col_offset = -col_offset_after;
-            elseif frame==size(objects(o).masks,3)
-                frames_forward = params.frame_inc;
-                row_offset = row_offset_before;
-                col_offset = col_offset_before;
-            else
-                row_offset = mean([row_offset_before -row_offset_after]);
-                col_offset = mean([col_offset_before -col_offset_after]);
-            end
-
-            for f=-frames_back:frames_forward
-                final_masks(:,:,frame*params.frame_inc+f+1) = get_offset_mask(curr_mask, round(f*row_offset/params.frame_inc), round(f*col_offset/params.frame_inc));
-            end
-        end
-        objects_final_masks(:,:,:,o) = final_masks;
     end
 end
 
@@ -338,6 +293,53 @@ function objects = interpolate_objects(objects, min_frames_per_object, max_f)
         end
     end
 end
+
+
+% find the masks to fill in between every [frame_inc]th mask
+function objects_final_masks = get_intermediate_masks(objects, params)
+    objects_final_masks = false(size(objects(1).masks,1), size(objects(1).masks,2), (size(objects(1).masks,3)+1)*params.frame_inc+1, numel(objects));
+    for o=1:numel(objects)
+        final_masks = false(size(objects_final_masks, 1), size(objects_final_masks, 2), size(objects_final_masks, 3));
+        for frame=1:size(objects(o).masks, 3)
+            original_mask = objects(o).masks(:,:,frame);
+            if frame~=1
+                [before_overlap, row_offset_before, col_offset_before] = get_overlap(objects(o).theta_medians(frame), objects(o).masks(:,:,frame-1), original_mask, false);
+                curr_mask = original_mask | before_overlap;
+            end
+            if frame < size(objects(o).masks,3)
+                [after_overlap, row_offset_after, col_offset_after] = get_overlap(objects(o).theta_medians(frame+1), objects(o).masks(:,:,frame+1), original_mask, true);
+                curr_mask = original_mask | after_overlap;
+            end
+
+            if frame~=1 && frame < size(objects(o).masks,3)
+                curr_mask = (original_mask & after_overlap) | (original_mask & before_overlap) | (after_overlap & before_overlap);
+            end
+
+            frames_back = params.frame_inc;
+            frames_forward = 0;
+
+            if frame==1
+                frames_back = params.frame_inc;
+                row_offset = -row_offset_after;
+                col_offset = -col_offset_after;
+            elseif frame==size(objects(o).masks,3)
+                frames_forward = params.frame_inc;
+                row_offset = row_offset_before;
+                col_offset = col_offset_before;
+            else
+                row_offset = mean([row_offset_before -row_offset_after]);
+                col_offset = mean([col_offset_before -col_offset_after]);
+            end
+
+            for f=-frames_back:frames_forward
+                final_masks(:,:,frame*params.frame_inc+f+1) = get_offset_mask(curr_mask, round(f*row_offset/params.frame_inc), round(f*col_offset/params.frame_inc));
+            end
+        end
+        objects_final_masks(:,:,:,o) = final_masks;
+    end
+end
+
+
 
 
 % HELPER FUNCTIONS
@@ -496,12 +498,9 @@ end
 
 % find how likely it is that two masks are the same object
 function rating = sameness(mask, prev_mask, theta)
-    % overlap rating - the larger the better
+    % find the best overlap as a percentage of area of the larger mask
     [prev_mask_offset, ~, ~] = get_overlap(theta, prev_mask, mask, false);
-    [mask_offset, ~, ~] = get_overlap(theta, mask, prev_mask, true);
-    best_offset1 = sum( sum( mask & prev_mask_offset ) );
-    best_offset2 = sum( sum( prev_mask & mask_offset ) );
-    rating = max(best_offset1, best_offset2) / max(sum( mask(:) ), sum( prev_mask(:) ));
+    rating = sum( sum( mask & prev_mask_offset ) ) / max(sum( mask(:) ), sum( prev_mask(:) ));
 end
 
 
