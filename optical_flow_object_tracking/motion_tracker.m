@@ -1,7 +1,8 @@
+addpath('util/')
 root = 'sequences/wheelock3/'; % folder holding flow_folder and image files
 flow_folder = 'flow/'; % name of the folder holding the optical flow files in the root directory
 fine_flow_folder = 'fine_flow/';
-input_video = 'video/wheelock3.mp4'; % video to track motion of
+input_video = 'video/wheelock3.mov'; % video to track motion of
 output_video = 'results/wheelock3.avi'; % name of video to create
 img_suffix = 'jpg'; % type of images used
 
