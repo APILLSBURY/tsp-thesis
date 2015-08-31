@@ -14,11 +14,6 @@ params.min_object_percentage = 0.1; % the minimum percentage of the image an obj
 params.cutoff_iters = 2; % the number of times to zero out everything below the mean flow
 params.min_frames_per_object = round(2 / params.time_inc); % the minimum number of frames that an object can consist of
 
-fine_params = params; % make a new set of params for finding fine masks
-fine_params.expansion = 40;
-fine_params.min_frames_per_object = 10;
-fine_params.sameness_threshold = 0.2;
-
 frame_rate = 10; % default frame rate in case we're not reading in from a video
 create_individual_object_videos = true; % whether to create an individual video for each object or not
 
@@ -30,6 +25,12 @@ else
 end
 
 params.frame_inc = round(params.time_inc * frame_rate);
+
+% make a new set of params for finding fine masks
+fine_params = params; 
+fine_params.expansion = 40;
+fine_params.min_frames_per_object = 10;
+fine_params.sameness_threshold = 0.2;
 
 % compute the optical flows for the frames
 compute_flows(root, img_suffix, flow_folder, params.frame_inc, false);

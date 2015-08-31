@@ -23,7 +23,7 @@ function object_masks = get_fine_masks(object_masks, params, root, flow_folder)
         fine_objects(1) = [];
         for f = 1:max_f
             frame_index = f+1+params.frame_inc;
-            fprintf('object %d, frame %d\n', o, frame_index);
+            fprintf('Finding fine masks for object %d in frame %d/%d\n', o, frame_index, max_f+1+params.frame_inc);
 
             orig_mask = object_masks(:,:,f,o);
             if sum(orig_mask(:)) == 0
