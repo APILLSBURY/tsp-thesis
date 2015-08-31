@@ -1,4 +1,4 @@
-function compute_flows(root, img_suffix, flow_folder, frame_inc, little_flow)
+function compute_flows(root, img_suffix, flow_folder, frame_inc, fine_flow)
     addpath('flow_code_v2/');
     files = dir([root '*.' img_suffix]);
     root_flows = fullfile(root, flow_folder);
@@ -6,26 +6,23 @@ function compute_flows(root, img_suffix, flow_folder, frame_inc, little_flow)
         mkdir(root_flows);
     end
 
-    % note: this part could be parrallelized to compute flows faster as
-    % they don't have to be computed in order
-    disp('Precomputing all the optical flows...');
-    if little_flow
-        parfor f=2:numel(files)
-            im1 = imread(fullfile(root,files(f-frame_inc).name));
-            im2 = imread(fullfile(root,files(f).name));
-            outname = fullfile(root_flows,[files(f).name(1:end-4) '_flow.mat']);
-            disp([' -> ' outname]);
-            compute_of(im1,im2,outname);
-        end
+    if fine_flow
+        frame_diff = frame_inc;
     else
-        for f=(1+frame_inc*2):frame_inc:numel(files)
-            im1 = imread(fullfile(root,files(f-frame_inc*2).name));
-            im2 = imread(fullfile(root,files(f).name));
-            outname = fullfile(root_flows,[files(f).name(1:end-4) '_flow.mat']);
-            disp([' -> ' outname]);
-            compute_of(im1,im2,outname);
-        end
+        frame_diff = frame_inc*2;
     end
+    start_index = 1 + frame_diff;
+    
+    disp('Precomputing all the optical flows...');
+    parfor ff = 0:floor((numel(files)-start_index)/frame_inc)
+        f = ff*frame_inc + start_index;
+        im1 = imread(fullfile(root,files(f-frame_diff).name));
+        im2 = imread(fullfile(root,files(f).name));
+        outname = fullfile(root_flows,[files(f).name(1:end-4) '_flow.mat']);
+        disp([' -> ' outname]);
+        compute_of(im1,im2,outname);
+    end
+    
     disp(' -> Optical flow calculations done');
 end
 

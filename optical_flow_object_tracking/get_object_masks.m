@@ -18,8 +18,6 @@ function object_masks = get_object_masks(params, root, flow_folder)
     
     % fill in the masks between every [frame_inc]th mask
     object_masks = get_intermediate_masks(objects, params);
-    
-    save('object_masks.mat', 'object_masks', 'params');
 end       
 
 
@@ -74,13 +72,6 @@ function objects = find_objects(root, params)
             
             % calculate the absolute median theta for this mask by removing the offset
             theta_median = get_absolute_theta(theta_median, theta_offset);
-            
-            % check to see if it's an object
-            %col_std = std(expanded_mask, 0, 1);
-            %row_std = std(expanded_mask, 0, 2);
-            %if mean([col_std(col_std>0) row_std(row_std>0)']) < params.std_threshold
-            %    continue;
-            %end
             
             % check to see if it matches another object
             max_sameness = 0; % initialize the max sameness

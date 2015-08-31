@@ -28,7 +28,6 @@ end
 % this puts the masks over the existing images
 function ims = mask_images(final_masks, root, frame_inc)
     files = dir([root '*.jpg']);
-    %ims = uint8(zeros(size(final_masks, 1), size(final_masks, 2), 3, min(numel(files)-frame_inc, size(final_masks, 3))));
     ims = uint8(zeros(size(final_masks, 1), size(final_masks, 2), 3, size(final_masks, 3)));
     for f=(2+frame_inc):(size(ims,4)+frame_inc+1)
         findex = f-frame_inc-1;
